@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jellyfish</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #03050c; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.1); font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Jellyfish · deep sea drift</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const jellies = [];
+
+  function createJelly(x, y) {
+    const tentacles = [];
+    const count = 6 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < count; i++) {
+      tentacles.push({
+        angle: (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.5,
+        length: 40 + Math.random() * 60,
+        segments: 10 + Math.floor(Math.random() * 8),
+      });
+    }
+    return {
+      x: x || Math.random() * W,
+      y: y || Math.random() * H,
+      radius: 20 + Math.random() * 30,
+      vx: (Math.random() - 0.5) * 0.2,
+      vy: (Math.random() - 0.5) * 0.2,
+      phase: Math.random() * Math.PI * 2,
+      hue: 200 + Math.random() * 80,
+      tentacles,
+      pulse: Math.random() * Math.PI * 2,
+    };
+  }
+
+  for (let i = 0; i < 5; i++) {
+    jellies.push(createJelly());
+  }
+
+  let time = 0;
+
+  function animate() {
+    time += 0.004;
+    ctx.fillStyle = 'rgba(3, 5, 12, 0.03)';
+    ctx.fillRect(0, 0, W, H);
+
+    for (const j of jellies) {
+      j.x += j.vx + Math.sin(time * 0.3 + j.phase) * 0.2;
+      j.y += j.vy + Math.cos(time * 0.2 + j.phase) * 0.1;
+
+      if (j.x < -50) j.x = W + 50;
+      if (j.x > W + 50) j.x = -50;
+      if (j.y < -50) j.y = H + 50;
+      if (j.y > H + 50) j.y = -50;
+
+      const pulse = Math.sin(time * 0.8 + j.pulse) * 0.15 + 0.85;
+      const r = j.radius * pulse;
+
+      const grad = ctx.createRadialGradient(j.x, j.y, 0, j.x, j.y, r);
+      grad.addColorStop(0, `hsla(${j.hue}, 80%, 65%, 0.15)`);
+      grad.addColorStop(0.5, `hsla(${j.hue}, 70%, 50%, 0.08)`);
+      grad.addColorStop(1, `hsla(${j.hue}, 60%, 40%, 0)`);
+
+      ctx.beginPath();
+      const steps = 20;
+      for (let i = 0; i <= steps; i++) {
+        const angle = (i / steps) * Math.PI * 2;
+        const wave = Math.sin(angle * 2 + time * 1.5 + j.phase) * r * 0.15;
+        const x = j.x + Math.cos(angle) * (r + wave);
+        const y = j.y + Math.sin(angle) * (r * 0.6 + wave * 0.3);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      for (const t of j.tentacles) {
+        ctx.beginPath();
+        ctx.moveTo(
+          j.x + Math.cos(t.angle) * r * 0.4,
+          j.y + Math.sin(t.angle) * r * 0.3
+        );
+        for (let i = 1; i <= t.segments; i++) {
+          const progress = i / t.segments;
+          const sway = Math.sin(time * 1.2 + t.angle * 2 + i * 0.5 + j.phase) * (8 + progress * 10);
+          const tx = j.x + Math.cos(t.angle) * (r * 0.4 + progress * t.length) + sway;
+          const ty = j.y + Math.sin(t.angle) * (r * 0.3 + progress * t.length * 0.5) + sway * 0.3;
+          ctx.lineTo(tx, ty);
+        }
+        ctx.strokeStyle = `hsla(${j.hue + 20}, 70%, 60%, ${0.06 + pulse * 0.04})`;
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+      }
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

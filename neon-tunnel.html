@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neon Tunnel</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #030305; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.1); font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Neon Tunnel · endless depth</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const rings = [];
+  const RING_COUNT = 30;
+  const cx = W / 2;
+  const cy = H / 2;
+
+  for (let i = 0; i < RING_COUNT; i++) {
+    rings.push({
+      z: i * 20,
+      radius: 20 + i * 8,
+      points: 20 + Math.floor(i * 0.5),
+      hue: (i * 12 + 200) % 360,
+      speed: 0.5 + i * 0.02,
+      phase: i * 0.3,
+      thickness: 3 - i * 0.08,
+      opacity: 1 - i / RING_COUNT,
+    });
+  }
+
+  let time = 0;
+
+  function animate() {
+    time += 0.006;
+    ctx.fillStyle = 'rgba(3, 3, 5, 0.1)';
+    ctx.fillRect(0, 0, W, H);
+
+    const perspective = 300;
+
+    for (const r of rings) {
+      r.z -= 0.8;
+
+      if (r.z < -100) {
+        r.z = (RING_COUNT - 1) * 20;
+      }
+
+      const scale = perspective / (perspective + r.z);
+      const screenX = cx;
+      const screenY = cy;
+      const screenRadius = r.radius * scale;
+
+      if (screenRadius < 2) continue;
+
+      const alpha = r.opacity * scale * 0.8;
+      const hueShift = Math.sin(time * 0.5 + r.phase) * 20;
+
+      ctx.beginPath();
+      for (let i = 0; i <= r.points; i++) {
+        const angle = (i / r.points) * Math.PI * 2 + time * r.speed * 0.02;
+        const wobble = Math.sin(time * 0.3 + i * 0.5 + r.phase) * 3 * scale;
+        const x = screenX + Math.cos(angle) * (screenRadius + wobble);
+        const y = screenY + Math.sin(angle) * (screenRadius * 0.6 + wobble * 0.5);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.strokeStyle = `hsla(${r.hue + hueShift}, 90%, 60%, ${Math.max(0, alpha)})`;
+      ctx.lineWidth = Math.max(0.5, r.thickness * scale);
+      ctx.shadowBlur = 15 * scale;
+      ctx.shadowColor = `hsla(${r.hue + hueShift}, 90%, 60%, ${alpha * 0.3})`;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

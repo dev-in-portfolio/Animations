@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Particle Fountain</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #08080f; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.1); font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Fountain · click for burst</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const particles = [];
+  const MAX = 300;
+  const cx = W / 2;
+  const ground = H - 20;
+
+  function spawn(colorOverride) {
+    if (particles.length >= MAX) return;
+    const hue = colorOverride !== undefined ? colorOverride : 200 + Math.random() * 80;
+    particles.push({
+      x: cx + (Math.random() - 0.5) * 20,
+      y: ground,
+      vx: (Math.random() - 0.5) * 3,
+      vy: -(8 + Math.random() * 6),
+      size: 2 + Math.random() * 3,
+      hue,
+      life: 1,
+      decay: 0.002 + Math.random() * 0.004,
+      trail: [],
+    });
+  }
+
+  for (let i = 0; i < 80; i++) spawn(200 + Math.random() * 60);
+
+  setInterval(() => { spawn(); }, 40);
+
+  document.addEventListener('click', (e) => {
+    for (let i = 0; i < 40; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 3 + Math.random() * 5;
+      particles.push({
+        x: e.clientX,
+        y: e.clientY,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 2,
+        size: 2 + Math.random() * 3,
+        hue: Math.random() * 60 + 300,
+        life: 1,
+        decay: 0.008 + Math.random() * 0.008,
+        trail: [],
+      });
+    }
+  });
+
+  let time = 0;
+
+  function animate() {
+    time += 0.01;
+    ctx.fillStyle = 'rgba(8, 8, 15, 0.06)';
+    ctx.fillRect(0, 0, W, H);
+
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.vy += 0.15;
+      p.vx *= 0.99;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life -= p.decay;
+
+      p.trail.push({ x: p.x, y: p.y });
+      if (p.trail.length > 12) p.trail.shift();
+
+      if (p.life <= 0 || p.y > ground + 10) {
+        particles.splice(i, 1);
+        continue;
+      }
+
+      for (let t = 0; t < p.trail.length; t++) {
+        const tp = p.trail[t];
+        const alpha = (t / p.trail.length) * p.life * 0.2;
+        ctx.beginPath();
+        ctx.arc(tp.x, tp.y, p.size * (t / p.trail.length) * 0.6, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${p.hue}, 80%, 60%, ${alpha})`;
+        ctx.fill();
+      }
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${p.hue}, 80%, 70%, ${p.life * 0.8})`;
+      ctx.fill();
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

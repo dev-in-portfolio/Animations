@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boids</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #050510; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.1); font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Boids · flocking swarm</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const boids = [];
+  const COUNT = 80;
+
+  for (let i = 0; i < COUNT; i++) {
+    boids.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 2,
+      vy: (Math.random() - 0.5) * 2,
+      hue: 200 + Math.random() * 60,
+      size: 3 + Math.random() * 2,
+    });
+  }
+
+  const mouse = { x: W / 2, y: H / 2 };
+
+  document.addEventListener('mousemove', (e) => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+  });
+
+  function animate() {
+    ctx.fillStyle = 'rgba(5, 5, 16, 0.04)';
+    ctx.fillRect(0, 0, W, H);
+
+    for (const b of boids) {
+      let alignX = 0, alignY = 0;
+      let cohX = 0, cohY = 0;
+      let sepX = 0, sepY = 0;
+      let neighbors = 0;
+
+      for (const other of boids) {
+        if (other === b) continue;
+        const dx = b.x - other.x;
+        const dy = b.y - other.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < 80) {
+          alignX += other.vx;
+          alignY += other.vy;
+          cohX += other.x;
+          cohY += other.y;
+          neighbors++;
+        }
+
+        if (dist < 25) {
+          sepX += dx / dist;
+          sepY += dy / dist;
+        }
+      }
+
+      if (neighbors > 0) {
+        alignX = (alignX / neighbors - b.vx) * 0.02;
+        alignY = (alignY / neighbors - b.vy) * 0.02;
+        cohX = (cohX / neighbors - b.x) * 0.003;
+        cohY = (cohY / neighbors - b.y) * 0.003;
+      }
+
+      const mdx = mouse.x - b.x;
+      const mdy = mouse.y - b.y;
+      const mdist = Math.sqrt(mdx * mdx + mdy * mdy);
+      let mouseForceX = 0, mouseForceY = 0;
+      if (mdist < 150) {
+        mouseForceX = -(mdx / mdist) * 0.3;
+        mouseForceY = -(mdy / mdist) * 0.3;
+      }
+
+      b.vx += alignX + cohX + sepX * 0.05 + mouseForceX;
+      b.vy += alignY + cohY + sepY * 0.05 + mouseForceY;
+
+      const speed = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+      if (speed > 3) { b.vx *= 3 / speed; b.vy *= 3 / speed; }
+      if (speed < 0.5) { b.vx *= 1.02; b.vy *= 1.02; }
+
+      b.x += b.vx;
+      b.y += b.vy;
+
+      if (b.x < -20) b.x = W + 20;
+      if (b.x > W + 20) b.x = -20;
+      if (b.y < -20) b.y = H + 20;
+      if (b.y > H + 20) b.y = -20;
+
+      const angle = Math.atan2(b.vy, b.vx);
+      ctx.save();
+      ctx.translate(b.x, b.y);
+      ctx.rotate(angle);
+
+      ctx.beginPath();
+      ctx.moveTo(b.size * 2, 0);
+      ctx.lineTo(-b.size, -b.size * 0.6);
+      ctx.lineTo(-b.size, b.size * 0.6);
+      ctx.closePath();
+
+      ctx.fillStyle = `hsla(${b.hue}, 70%, 60%, 0.7)`;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

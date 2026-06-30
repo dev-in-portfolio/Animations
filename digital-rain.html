@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Digital Rain</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; overflow: hidden; height: 100vh; font-family: 'Courier New', monospace; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(0,255,70,0.15); font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Digital Rain · matrix style</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const chars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789';
+  const fontSize = 14;
+  const cols = Math.floor(W / fontSize);
+  const drops = [];
+
+  for (let i = 0; i < cols; i++) {
+    drops[i] = {
+      y: Math.random() * H,
+      speed: 0.3 + Math.random() * 0.7,
+      length: 5 + Math.floor(Math.random() * 15),
+      head: Math.floor(Math.random() * 20),
+    };
+  }
+
+  let frame = 0;
+
+  function animate() {
+    frame++;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+    ctx.fillRect(0, 0, W, H);
+
+    for (let i = 0; i < cols; i++) {
+      const drop = drops[i];
+      const x = i * fontSize;
+
+      for (let j = 0; j < drop.length; j++) {
+        const y = drop.y - j * fontSize;
+        if (y < -fontSize || y > H + fontSize) continue;
+
+        const char = chars[Math.floor(Math.random() * chars.length)];
+        const isHead = j === 0;
+
+        if (isHead) {
+          ctx.fillStyle = 'rgba(180, 255, 200, 0.9)';
+          ctx.font = `bold ${fontSize}px 'Courier New', monospace`;
+        } else if (j < 3) {
+          ctx.fillStyle = `rgba(0, 255, 70, ${0.6 - j * 0.15})`;
+          ctx.font = `${fontSize}px 'Courier New', monospace`;
+        } else {
+          ctx.fillStyle = `rgba(0, 255, 70, ${0.3 - j * 0.02})`;
+          ctx.font = `${fontSize}px 'Courier New', monospace`;
+        }
+        ctx.fillText(char, x, y);
+      }
+
+      drop.y += drop.speed;
+
+      if (drop.y - drop.length * fontSize > H + 20) {
+        drop.y = -drop.length * fontSize;
+        drop.speed = 0.3 + Math.random() * 0.7;
+        drop.length = 5 + Math.floor(Math.random() * 15);
+      }
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

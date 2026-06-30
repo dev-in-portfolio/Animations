@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Particle Thunderstorm</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #04040a; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.06); font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Thunderstorm · cloud bursts</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const drops = [];
+  const bolts = [];
+  const cloud = [];
+
+  for (let i = 0; i < 80; i++) {
+    cloud.push({
+      x: Math.random() * W,
+      y: Math.random() * 120,
+      size: 20 + Math.random() * 50,
+      alpha: 0.04 + Math.random() * 0.04,
+      vx: (Math.random() - 0.5) * 0.1,
+    });
+  }
+
+  for (let i = 0; i < 150; i++) {
+    drops.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      speed: 4 + Math.random() * 6,
+      length: 8 + Math.random() * 10,
+      wind: (Math.random() - 0.5) * 0.8,
+      alpha: 0.05 + Math.random() * 0.08,
+    });
+  }
+
+  function strikeBolt() {
+    const x = Math.random() * W;
+    const segs = 6 + Math.floor(Math.random() * 8);
+    const pts = [{ x, y: 80 }];
+    let cx = x, cy = 80;
+    for (let i = 0; i < segs; i++) {
+      cx += (Math.random() - 0.5) * 30;
+      cy += 20 + Math.random() * 25;
+      pts.push({ x: cx, y: cy });
+    }
+    bolts.push({ pts, life: 1 });
+  }
+
+  let time = 0;
+  let flash = 0;
+
+  function animate() {
+    time += 0.005;
+    flash = Math.max(0, flash - 0.03);
+
+    if (flash > 0) {
+      ctx.fillStyle = `rgba(180, 200, 255, ${flash * 0.05})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    ctx.fillStyle = `rgba(4, 4, 10, 0.04)`;
+    ctx.fillRect(0, 0, W, H);
+
+    for (const c of cloud) {
+      c.x += c.vx;
+      if (c.x < -c.size) c.x = W + c.size;
+      if (c.x > W + c.size) c.x = -c.size;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, c.size, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(0, 0%, 30%, ${c.alpha})`;
+      ctx.fill();
+    }
+
+    for (const d of drops) {
+      d.x += d.wind;
+      d.y += d.speed;
+      if (d.y > H + 10) { d.y = -10; d.x = Math.random() * W; }
+      ctx.beginPath();
+      ctx.moveTo(d.x, d.y);
+      ctx.lineTo(d.x - d.wind * 2, d.y - d.length);
+      ctx.strokeStyle = `hsla(220, 40%, 50%, ${d.alpha})`;
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+
+    for (let i = bolts.length - 1; i >= 0; i--) {
+      const b = bolts[i];
+      b.life -= 0.03;
+      if (b.life <= 0) { bolts.splice(i, 1); continue; }
+      if (b.life > 0.7) flash = 0.7;
+
+      ctx.beginPath();
+      ctx.moveTo(b.pts[0].x, b.pts[0].y);
+      for (let j = 1; j < b.pts.length; j++) {
+        const off = (Math.random() - 0.5) * 3 * (1 - b.life);
+        ctx.lineTo(b.pts[j].x + off, b.pts[j].y);
+      }
+      ctx.strokeStyle = `hsla(220, 100%, ${50 + b.life * 40}%, ${b.life * 0.5})`;
+      ctx.lineWidth = 2 * b.life;
+      ctx.stroke();
+    }
+
+    if (Math.random() < 0.005) strikeBolt();
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

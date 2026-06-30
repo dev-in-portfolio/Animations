@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pixel Melt</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #08080a; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.1); font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Pixel Melt · dripping columns</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const cols = Math.floor(W / 6);
+  const drops = [];
+
+  for (let i = 0; i < cols; i++) {
+    drops.push({
+      x: i * 6 + 3,
+      y: Math.random() * H,
+      speed: 0.3 + Math.random() * 0.8,
+      length: 10 + Math.random() * 30,
+      hue: 240 + Math.random() * 120,
+      alpha: 0.3 + Math.random() * 0.4,
+      phase: Math.random() * Math.PI * 2,
+    });
+  }
+
+  let time = 0;
+
+  function animate() {
+    time += 0.005;
+    ctx.fillStyle = 'rgba(8, 8, 10, 0.03)';
+    ctx.fillRect(0, 0, W, H);
+
+    for (const d of drops) {
+      d.y += d.speed;
+      if (d.y - d.length > H + 20) {
+        d.y = -d.length;
+        d.speed = 0.3 + Math.random() * 0.8;
+        d.length = 10 + Math.random() * 30;
+      }
+
+      for (let j = 0; j < d.length; j++) {
+        const y = d.y - j * 6;
+        if (y < 0 || y > H) continue;
+
+        const wobble = Math.sin(time + d.phase + j * 0.3) * 1.5;
+        const alpha = d.alpha * (1 - j / d.length) * 0.5;
+        const size = 3 + (1 - j / d.length) * 2;
+
+        ctx.fillStyle = `hsla(${d.hue + j * 2}, 70%, ${55 + j * 0.3}%, ${alpha})`;
+        ctx.fillRect(d.x + wobble, y, size, size + 1);
+      }
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

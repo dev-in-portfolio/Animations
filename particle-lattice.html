@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Particle Lattice</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #08080f; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.08); font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Lattice · 3D grid</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const cx = W / 2;
+  const cy = H / 2;
+  const SPACING = 35;
+  const SIZE = 5;
+  const points = [];
+  for (let x = -SIZE; x <= SIZE; x++) {
+    for (let y = -SIZE; y <= SIZE; y++) {
+      for (let z = -SIZE; z <= SIZE; z++) {
+        points.push({
+          x: x * SPACING,
+          y: y * SPACING,
+          z: z * SPACING,
+          baseX: x * SPACING,
+          baseY: y * SPACING,
+          baseZ: z * SPACING,
+          hue: 200 + (x / SIZE) * 40 + (z / SIZE) * 40,
+          phase: Math.random() * Math.PI * 2,
+        });
+      }
+    }
+  }
+
+  let time = 0;
+
+  function animate() {
+    time += 0.005;
+    ctx.fillStyle = 'rgba(8, 8, 15, 0.04)';
+    ctx.fillRect(0, 0, W, H);
+
+    const rotX = time * 0.2;
+    const rotY = time * 0.3;
+    const scale = 300 / (300 + 100);
+
+    const sorted = points.map(p => {
+      let x = p.baseX;
+      let y = p.baseY;
+      let z = p.baseZ;
+
+      const ry = y * Math.cos(rotX) - z * Math.sin(rotX);
+      const rz = y * Math.sin(rotX) + z * Math.cos(rotX);
+      y = ry; z = rz;
+
+      const rx = x * Math.cos(rotY) + z * Math.sin(rotY);
+      z = -x * Math.sin(rotY) + z * Math.cos(rotY);
+      x = rx;
+
+      x += Math.sin(time + p.phase + p.baseZ * 0.05) * 3;
+      y += Math.cos(time * 0.7 + p.phase + p.baseX * 0.05) * 3;
+
+      const perspective = 300 / (300 + z);
+      const sx = cx + x * perspective;
+      const sy = cy + y * perspective;
+
+      return { sx, sy, z, perspective, hue: p.hue, phase: p.phase };
+    });
+
+    sorted.sort((a, b) => a.z - b.z);
+
+    for (const p of sorted) {
+      if (p.z < -280 || p.z > 280) continue;
+      const alpha = 0.2 + (p.z / 300) * 0.3 + 0.3;
+      const size = 2 * p.perspective;
+      const hue = p.hue + Math.sin(time + p.phase) * 15;
+
+      ctx.beginPath();
+      ctx.arc(p.sx, p.sy, size, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${hue}, 70%, ${40 + p.perspective * 30}%, ${alpha})`;
+      ctx.fill();
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

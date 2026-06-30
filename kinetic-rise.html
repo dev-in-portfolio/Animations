@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kinetic Rise</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0a0f; overflow: hidden; height: 100vh; font-family: 'Inter', system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.1); font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Kinetic Rise · shapes ascend from below</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const shapes = [];
+  const COUNT = 80;
+
+  function randomShape() {
+    const types = ['circle', 'square', 'triangle', 'diamond'];
+    return types[Math.floor(Math.random() * types.length)];
+  }
+
+  function spawn() {
+    for (let i = 0; i < COUNT; i++) {
+      shapes.push({
+        x: Math.random() * W,
+        y: H + 50 + Math.random() * 200,
+        size: 4 + Math.random() * 14,
+        speed: 0.2 + Math.random() * 0.8,
+        wobble: Math.random() * Math.PI * 2,
+        wobbleAmp: 10 + Math.random() * 30,
+        rotation: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 0.02,
+        type: randomShape(),
+        hue: 200 + Math.random() * 160,
+        delay: Math.random() * 80,
+        frame: 0,
+        alpha: 1,
+      });
+    }
+  }
+  spawn();
+
+  let time = 0;
+
+  function drawShape(x, y, size, type, rotation) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rotation);
+
+    switch(type) {
+      case 'circle':
+        ctx.beginPath();
+        ctx.arc(0, 0, size / 2, 0, Math.PI * 2);
+        break;
+      case 'square':
+        ctx.fillRect(-size / 2, -size / 2, size, size);
+        return;
+      case 'triangle':
+        ctx.beginPath();
+        ctx.moveTo(0, -size / 2);
+        ctx.lineTo(-size / 2, size / 2);
+        ctx.lineTo(size / 2, size / 2);
+        ctx.closePath();
+        break;
+      case 'diamond':
+        ctx.beginPath();
+        ctx.moveTo(0, -size / 2);
+        ctx.lineTo(size / 2, 0);
+        ctx.lineTo(0, size / 2);
+        ctx.lineTo(-size / 2, 0);
+        ctx.closePath();
+        break;
+    }
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function animate() {
+    time += 0.005;
+    ctx.fillStyle = 'rgba(10, 10, 15, 0.08)';
+    ctx.fillRect(0, 0, W, H);
+
+    for (let i = shapes.length - 1; i >= 0; i--) {
+      const s = shapes[i];
+      s.frame++;
+
+      if (s.frame < s.delay) continue;
+
+      s.y -= s.speed;
+      s.x += Math.sin(time * 2 + s.wobble) * 0.4;
+      s.rotation += s.rotSpeed;
+
+      if (s.y < -50) {
+        shapes.splice(i, 1);
+        continue;
+      }
+
+      const progress = Math.min(1, (s.frame - s.delay) / 40);
+      const alpha = progress * s.alpha * 0.7;
+      const scale = progress;
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(s.x, s.y);
+      ctx.scale(scale, scale);
+      ctx.fillStyle = `hsla(${s.hue + Math.sin(time + s.wobble) * 20}, 70%, 60%, 1)`;
+      ctx.rotate(s.rotation);
+      drawShape(0, 0, s.size, s.type, 0);
+      ctx.restore();
+    }
+
+    if (shapes.length < COUNT / 2) {
+      const s = {
+        x: Math.random() * W,
+        y: H + 50 + Math.random() * 100,
+        size: 4 + Math.random() * 14,
+        speed: 0.2 + Math.random() * 0.8,
+        wobble: Math.random() * Math.PI * 2,
+        wobbleAmp: 10 + Math.random() * 30,
+        rotation: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 0.02,
+        type: randomShape(),
+        hue: 200 + Math.random() * 160,
+        delay: Math.random() * 40,
+        frame: 0,
+        alpha: 1,
+      };
+      shapes.push(s);
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

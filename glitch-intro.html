@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Glitch Intro</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #000;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    font-family: 'Courier New', monospace;
+    cursor: none;
+  }
+  .glitch-wrapper {
+    position: relative;
+    text-align: center;
+    animation: flicker 3s infinite;
+  }
+  .glitch {
+    font-size: clamp(3rem, 10vw, 6rem);
+    font-weight: 700;
+    color: #fff;
+    position: relative;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .glitch::before,
+  .glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    inset: 0;
+    opacity: 0.8;
+  }
+  .glitch::before {
+    color: #ff00c1;
+    animation: glitch-shift 2s infinite linear alternate-reverse;
+    clip-path: inset(20% 0 60% 0);
+  }
+  .glitch::after {
+    color: #00fff7;
+    animation: glitch-shift 3s infinite linear alternate;
+    clip-path: inset(60% 0 10% 0);
+  }
+  .sub {
+    color: rgba(255,255,255,0.25);
+    font-size: 0.8rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    margin-top: 1rem;
+    font-family: 'Courier New', monospace;
+    animation: blink 2s step-end infinite;
+  }
+  .scanlines {
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(255,255,255,0.015) 2px,
+      rgba(255,255,255,0.015) 4px
+    );
+    pointer-events: none;
+    z-index: 2;
+  }
+  .noise {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.04;
+  }
+  .vignette {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.6) 100%);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  @keyframes glitch-shift {
+    0% { transform: translate(0); }
+    20% { transform: translate(-3px, 2px); }
+    40% { transform: translate(3px, -1px); }
+    60% { transform: translate(-2px, -3px); }
+    80% { transform: translate(4px, 1px); }
+    100% { transform: translate(0); }
+  }
+  @keyframes flicker {
+    0%, 100% { opacity: 1; }
+    3% { opacity: 0.6; }
+    4% { opacity: 1; }
+    6% { opacity: 0.8; }
+    7% { opacity: 1; }
+    92% { opacity: 1; }
+    93% { opacity: 0.5; }
+    94% { opacity: 1; }
+  }
+  @keyframes blink {
+    50% { opacity: 0; }
+  }
+  .label {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255,255,255,0.12);
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    z-index: 3;
+  }
+</style>
+</head>
+<body>
+  <div class="scanlines"></div>
+  <canvas class="noise" id="noise"></canvas>
+  <div class="vignette"></div>
+
+  <div class="glitch-wrapper">
+    <div class="glitch" data-text="ENTER">ENTER</div>
+    <div class="sub">_click anywhere_</div>
+  </div>
+
+  <div class="label">Glitch Intro · CRT / VHS style</div>
+
+  <script>
+    const canvas = document.getElementById('noise');
+    const ctx = canvas.getContext('2d');
+    let W, H;
+    function resize() {
+      W = canvas.width = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    function noise() {
+      const imageData = ctx.createImageData(W, H);
+      const data = imageData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        const v = Math.random() * 255;
+        data[i] = v;
+        data[i + 1] = v;
+        data[i + 2] = v;
+        data[i + 3] = 12;
+      }
+      ctx.putImageData(imageData, 0, 0);
+      requestAnimationFrame(noise);
+    }
+    noise();
+
+    document.querySelector('.glitch-wrapper').addEventListener('click', () => {
+      document.body.style.background = '#fff';
+      document.body.style.transition = 'background 0.1s';
+      setTimeout(() => {
+        document.body.style.background = '#000';
+      }, 100);
+    });
+  </script>
+</body>
+</html>

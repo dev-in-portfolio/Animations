@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lava Lamp</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0508; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.1); font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Lava Lamp · oozing blobs</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const blobs = [];
+  const COUNT = 8;
+
+  for (let i = 0; i < COUNT; i++) {
+    blobs.push({
+      x: W / 2 + (Math.random() - 0.5) * 100,
+      y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() > 0.5 ? 1 : -1) * (0.1 + Math.random() * 0.3),
+      radius: 30 + Math.random() * 60,
+      hue: 320 + Math.random() * 40,
+      phase: Math.random() * Math.PI * 2,
+      squish: Math.random() * Math.PI * 2,
+    });
+  }
+
+  let time = 0;
+
+  function animate() {
+    time += 0.005;
+    ctx.fillStyle = 'rgba(10, 5, 8, 0.04)';
+    ctx.fillRect(0, 0, W, H);
+
+    for (const b of blobs) {
+      b.y += b.vy;
+      b.x += Math.sin(time + b.phase) * 0.3;
+
+      if (b.y < -b.radius) b.vy = Math.abs(b.vy);
+      if (b.y > H + b.radius) b.vy = -Math.abs(b.vy);
+      if (b.x < b.radius) b.vx = Math.abs(b.vx);
+      if (b.x > W - b.radius) b.vx = -Math.abs(b.vx);
+
+      const wobbleX = Math.sin(time * 0.8 + b.squish) * b.radius * 0.15;
+      const wobbleY = Math.cos(time * 0.6 + b.squish * 1.3) * b.radius * 0.15;
+
+      const grad = ctx.createRadialGradient(
+        b.x + wobbleX * 0.3, b.y + wobbleY * 0.3, 0,
+        b.x, b.y, b.radius
+      );
+      grad.addColorStop(0, `hsla(${b.hue + 20}, 90%, 65%, 0.3)`);
+      grad.addColorStop(0.4, `hsla(${b.hue}, 80%, 50%, 0.15)`);
+      grad.addColorStop(0.7, `hsla(${b.hue - 20}, 70%, 40%, 0.08)`);
+      grad.addColorStop(1, `hsla(${b.hue - 30}, 60%, 30%, 0)`);
+
+      ctx.beginPath();
+      const steps = 30;
+      for (let i = 0; i <= steps; i++) {
+        const angle = (i / steps) * Math.PI * 2;
+        const wave = Math.sin(angle * 3 + time + b.squish) * wobbleX * 0.5
+                   + Math.cos(angle * 2 + time * 0.7 + b.squish) * wobbleY * 0.5;
+        const r = b.radius + wave;
+        const x = b.x + Math.cos(angle) * r;
+        const y = b.y + Math.sin(angle) * r;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.fillStyle = grad;
+      ctx.fill();
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

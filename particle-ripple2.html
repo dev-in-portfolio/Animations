@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Particle Ripple</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #08080e; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.08); font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Ripple · click to send wave</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const ripples = [];
+
+  function createRipple(x, y) {
+    const count = 80;
+    const particles = [];
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2;
+      particles.push({
+        angle,
+        hue: 200 + Math.random() * 60,
+        phase: Math.random() * Math.PI * 2,
+        size: 2 + Math.random() * 3,
+      });
+    }
+    ripples.push({ x, y, particles, radius: 2, maxRadius: 120 + Math.random() * 60, life: 1 });
+  }
+
+  document.addEventListener('click', (e) => createRipple(e.clientX, e.clientY));
+  createRipple(W / 2, H / 2);
+
+  let time = 0;
+
+  function animate() {
+    time += 0.004;
+    ctx.fillStyle = 'rgba(8, 8, 14, 0.02)';
+    ctx.fillRect(0, 0, W, H);
+
+    for (let r = ripples.length - 1; r >= 0; r--) {
+      const rip = ripples[r];
+      rip.radius += 0.8;
+      rip.life = 1 - rip.radius / rip.maxRadius;
+
+      if (rip.life <= 0) { ripples.splice(r, 1); continue; }
+
+      for (const p of rip.particles) {
+        const a = p.angle + time * 0.01;
+        const wobble = Math.sin(rip.radius * 0.1 + p.phase + time) * 4;
+        const x = rip.x + Math.cos(a) * (rip.radius + wobble);
+        const y = rip.y + Math.sin(a) * (rip.radius + wobble);
+
+        const alpha = rip.life * 0.35;
+        const size = p.size * rip.life;
+
+        ctx.beginPath();
+        ctx.arc(x, y, size, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${p.hue + Math.sin(time + p.phase) * 15}, 70%, 60%, ${alpha})`;
+        ctx.fill();
+      }
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

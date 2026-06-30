@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orbit Rings</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #050508; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.12); font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Orbit Rings · click to burst</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const rings = [];
+  const RING_COUNT = 5;
+  const cx = W / 2;
+  const cy = H / 2;
+
+  for (let r = 0; r < RING_COUNT; r++) {
+    const count = 40 + r * 20;
+    const baseRadius = 80 + r * 60;
+    const particles = [];
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2;
+      particles.push({
+        angle,
+        radius: baseRadius + (Math.random() - 0.5) * 10,
+        speed: (0.3 + r * 0.1) * (r % 2 === 0 ? 1 : -1),
+        wobble: Math.random() * Math.PI * 2,
+        wobbleAmp: 2 + Math.random() * 4,
+      });
+    }
+    rings.push({
+      particles,
+      hue: 180 + r * 30,
+      yOff: (r - 2) * 8,
+    });
+  }
+
+  let time = 0;
+
+  function animate() {
+    time += 0.01;
+    ctx.fillStyle = 'rgba(5, 5, 8, 0.15)';
+    ctx.fillRect(0, 0, W, H);
+
+    for (const ring of rings) {
+      for (const p of ring.particles) {
+        p.angle += p.speed * 0.008;
+        const wobble = Math.sin(time + p.wobble) * p.wobbleAmp;
+        const x = cx + Math.cos(p.angle) * (p.radius + wobble);
+        const y = cy + Math.sin(p.angle) * (p.radius * 0.4 + wobble * 0.3) + ring.yOff;
+        const alpha = 0.3 + Math.sin(time * 2 + p.angle) * 0.2;
+        ctx.beginPath();
+        ctx.arc(x, y, 1.5 + Math.sin(time + p.wobble) * 0.5, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${ring.hue + Math.sin(time * 0.5 + p.angle) * 20}, 80%, 65%, ${alpha})`;
+        ctx.fill();
+      }
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+
+  document.addEventListener('click', () => {
+    ctx.fillStyle = 'rgba(5, 5, 8, 1)';
+    ctx.fillRect(0, 0, W, H);
+  });
+
+  window.addEventListener('resize', () => {
+    resize();
+    cx = W / 2;
+    cy = H / 2;
+  });
+</script>
+</body>
+</html>

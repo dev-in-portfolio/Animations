@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solar Flare</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #050308; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.1); font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Solar Flare · coronal loops</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const cx = W / 2;
+  const cy = H / 2;
+
+  const loops = [];
+  const COUNT = 15;
+
+  for (let i = 0; i < COUNT; i++) {
+    const points = [];
+    const numPoints = 30 + Math.floor(Math.random() * 20);
+    for (let j = 0; j < numPoints; j++) {
+      points.push({
+        t: j / numPoints,
+        angle: Math.random() * Math.PI * 2,
+        radius: 50 + Math.random() * 150,
+        offset: (Math.random() - 0.5) * 40,
+      });
+    }
+    loops.push({
+      points,
+      hue: 20 + Math.random() * 40,
+      alpha: 0.05 + Math.random() * 0.08,
+      speed: 0.2 + Math.random() * 0.3,
+      phase: Math.random() * Math.PI * 2,
+      width: 1 + Math.random() * 3,
+    });
+  }
+
+  let time = 0;
+
+  function animate() {
+    time += 0.004;
+    ctx.fillStyle = 'rgba(5, 3, 8, 0.03)';
+    ctx.fillRect(0, 0, W, H);
+
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 200);
+    grad.addColorStop(0, `hsla(30, 100%, 60%, ${0.04 + Math.sin(time) * 0.02})`);
+    grad.addColorStop(0.5, `hsla(20, 100%, 40%, ${0.02})`);
+    grad.addColorStop(1, 'transparent');
+    ctx.beginPath();
+    ctx.arc(cx, cy, 200, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    for (const loop of loops) {
+      ctx.beginPath();
+      for (let i = 0; i < loop.points.length; i++) {
+        const p = loop.points[i];
+        const wave = Math.sin(time * loop.speed + p.t * 6 + loop.phase) * p.offset * 0.5;
+        const wave2 = Math.cos(time * loop.speed * 0.7 + p.t * 4 + loop.phase) * p.offset * 0.3;
+        const r = p.radius + wave + wave2;
+        const angle = p.angle + Math.sin(time * 0.3 + p.t * 2) * 0.3;
+        const x = cx + Math.cos(angle) * r;
+        const y = cy + Math.sin(angle) * r * 0.5;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = `hsla(${loop.hue + Math.sin(time + loop.phase) * 15}, 100%, ${55 + Math.sin(time * loop.speed + loop.phase) * 15}%, ${loop.alpha})`;
+      ctx.lineWidth = loop.width;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = `hsla(${loop.hue}, 100%, 50%, ${loop.alpha * 0.3})`;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

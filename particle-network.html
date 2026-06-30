@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Particle Network</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0a0f; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.15); font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Particle Network · move your mouse</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const COUNT = 120;
+  const particles = [];
+  const mouse = { x: W/2, y: H/2 };
+
+  for (let i = 0; i < COUNT; i++) {
+    particles.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.8,
+      vy: (Math.random() - 0.5) * 0.8,
+      r: 1.5 + Math.random() * 2,
+    });
+  }
+
+  document.addEventListener('mousemove', (e) => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+  });
+
+  let time = 0;
+
+  function animate() {
+    time += 0.002;
+    ctx.fillStyle = 'rgba(10, 10, 15, 0.12)';
+    ctx.fillRect(0, 0, W, H);
+
+    for (let i = 0; i < COUNT; i++) {
+      const p = particles[i];
+
+      p.x += p.vx;
+      p.y += p.vy;
+
+      if (p.x < 0 || p.x > W) p.vx *= -1;
+      if (p.y < 0 || p.y > H) p.vy *= -1;
+
+      const dx = mouse.x - p.x;
+      const dy = mouse.y - p.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 200) {
+        p.vx -= dx * 0.0002;
+        p.vy -= dy * 0.0002;
+      }
+
+      const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+      if (speed > 2) { p.vx *= 0.98; p.vy *= 0.98; }
+
+      for (let j = i + 1; j < COUNT; j++) {
+        const p2 = particles[j];
+        const dx2 = p.x - p2.x;
+        const dy2 = p.y - p2.y;
+        const d = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+        if (d < 180) {
+          const alpha = (1 - d / 180) * 0.5;
+          const hue = 200 + Math.sin(time + d * 0.01) * 40;
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.strokeStyle = `hsla(${hue}, 80%, 60%, ${alpha})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+
+      const hue = 200 + Math.sin(time + i * 0.1) * 40;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${hue}, 80%, 70%, 0.8)`;
+      ctx.fill();
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

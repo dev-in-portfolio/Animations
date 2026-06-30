@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fractal Tree</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #050308; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(150,255,100,0.12); font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Fractal Tree · recursive growth</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  let time = 0;
+  const trees = [];
+  const mouse = { x: W / 2, y: H };
+
+  document.addEventListener('mousemove', (e) => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+  });
+
+  function drawBranch(x, y, angle, length, depth, maxDepth, growProgress) {
+    if (depth > maxDepth || length < 2) return;
+
+    const endX = x + Math.cos(angle) * length * growProgress;
+    const endY = y + Math.sin(angle) * length * growProgress;
+
+    const hue = 120 + depth * 15;
+    const alpha = 0.3 + (1 - depth / maxDepth) * 0.5;
+    const width = Math.max(0.5, (1 - depth / maxDepth) * 4);
+
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(endX, endY);
+    ctx.strokeStyle = `hsla(${hue + Math.sin(time * 0.5 + depth) * 10}, 70%, ${40 + depth * 5}%, ${alpha})`;
+    ctx.lineWidth = width;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    if (growProgress >= 1) {
+      const spread = 0.3 + depth * 0.05;
+      const childLen = length * (0.65 + Math.random() * 0.05);
+      drawBranch(endX, endY, angle - spread, childLen, depth + 1, maxDepth, 1);
+      drawBranch(endX, endY, angle + spread, childLen, depth + 1, maxDepth, 1);
+      if (depth < maxDepth - 1) {
+        drawBranch(endX, endY, angle - spread * 0.5, childLen * 0.7, depth + 1, maxDepth, 1);
+      }
+    }
+  }
+
+  function animate() {
+    time += 0.005;
+    ctx.fillStyle = 'rgba(5, 3, 8, 0.02)';
+    ctx.fillRect(0, 0, W, H);
+
+    const progress = Math.min(1, time / 2);
+    drawBranch(mouse.x, mouse.y, -Math.PI / 2, 120, 0, 9, progress);
+
+    if (time > 3) {
+      time = 0;
+      ctx.fillStyle = 'rgba(5, 3, 8, 1)';
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

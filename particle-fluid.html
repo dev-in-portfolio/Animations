@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Particle Fluid</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #06080e; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.06); font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Fluid · click to splash</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const COUNT = 500;
+  const particles = [];
+
+  for (let i = 0; i < COUNT; i++) {
+    particles.push({
+      x: W * 0.3 + Math.random() * W * 0.4,
+      y: H * 0.3 + Math.random() * H * 0.4,
+      vx: (Math.random() - 0.5) * 2,
+      vy: (Math.random() - 0.5) * 2,
+      r: 5 + Math.random() * 4,
+      hue: 200 + Math.random() * 40,
+    });
+  }
+
+  let mouse = { x: W / 2, y: H / 2, down: false, px: W / 2, py: H / 2 };
+
+  canvas.addEventListener('mousedown', e => {
+    mouse.down = true;
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+    mouse.px = e.clientX;
+    mouse.py = e.clientY;
+    for (const p of particles) {
+      const dx = p.x - e.clientX;
+      const dy = p.y - e.clientY;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d < 120) {
+        const force = (1 - d / 120) * 12;
+        const angle = Math.atan2(dy, dx);
+        p.vx += Math.cos(angle) * force + (Math.random() - 0.5) * 3;
+        p.vy += Math.sin(angle) * force + (Math.random() - 0.5) * 3;
+      }
+    }
+  });
+
+  canvas.addEventListener('mousemove', e => {
+    mouse.px = mouse.x;
+    mouse.py = mouse.y;
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+  });
+
+  canvas.addEventListener('mouseup', () => { mouse.down = false; });
+
+  function simulate() {
+    const GRAVITY = 0.15;
+    const DAMPING = 0.99;
+    const RADIUS = 45;
+    const TARGET_DENSITY = 0.7;
+    const PRESSURE_MULT = 1.5;
+    const VISCOUS = 0.3;
+
+    for (const p of particles) {
+      p.vy += GRAVITY;
+      p.vx += (Math.random() - 0.5) * 0.05;
+    }
+
+    for (let i = 0; i < particles.length; i++) {
+      const a = particles[i];
+      let density = 0;
+      let nearDensity = 0;
+
+      for (let j = 0; j < particles.length; j++) {
+        if (i === j) continue;
+        const b = particles[j];
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < RADIUS) {
+          const t = 1 - d / RADIUS;
+          density += t * t;
+          nearDensity += t * t * t;
+        }
+      }
+
+      const pressure = (density - TARGET_DENSITY) * PRESSURE_MULT;
+      const nearPressure = nearDensity * 0.3;
+
+      for (let j = 0; j < particles.length; j++) {
+        if (i === j) continue;
+        const b = particles[j];
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < RADIUS && d > 0.01) {
+          const t = 1 - d / RADIUS;
+          const force = (pressure * t + nearPressure * t * t) * 0.5 / d;
+          a.vx += dx * force;
+          a.vy += dy * force;
+          b.vx -= dx * force;
+          b.vy -= dy * force;
+        }
+      }
+    }
+
+    for (const p of particles) {
+      p.vx *= DAMPING;
+      p.vy *= DAMPING;
+      p.x += p.vx;
+      p.y += p.vy;
+
+      if (p.x < 0) { p.x = 0; p.vx *= -0.3; }
+      if (p.x > W) { p.x = W; p.vx *= -0.3; }
+      if (p.y < 0) { p.y = 0; p.vy *= -0.3; }
+      if (p.y > H) { p.y = H; p.vy *= -0.3; }
+    }
+  }
+
+  let time = 0;
+
+  function draw() {
+    time += 0.016;
+    ctx.fillStyle = 'rgba(6, 8, 14, 0.03)';
+    ctx.fillRect(0, 0, W, H);
+
+    for (const p of particles) {
+      const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+      const hue = p.hue + speed * 8 + Math.sin(time + p.hue) * 5;
+      const rad = p.r * (0.5 + speed * 0.3);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, rad, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${hue}, 80%, ${45 + speed * 15}%, ${0.15 + speed * 0.15})`;
+      ctx.fill();
+      if (rad > 3) {
+        ctx.beginPath();
+        ctx.arc(p.x - speed * 0.5, p.y - speed * 0.5, rad * 0.3, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(0, 0%, 100%, ${0.05 + speed * 0.05})`;
+        ctx.fill();
+      }
+    }
+  }
+
+  function animate() {
+    simulate();
+    draw();
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

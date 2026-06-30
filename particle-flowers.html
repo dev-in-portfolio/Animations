@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Particle Cosmos</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0a0f; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.08); font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Cosmos · blooming orbits</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const cx = W / 2;
+  const cy = H / 2;
+  const FLOWERS = 6;
+  const PETALS = 40;
+  const particles = [];
+
+  for (let f = 0; f < FLOWERS; f++) {
+    const baseAngle = (f / FLOWERS) * Math.PI * 2;
+    const baseRadius = 80 + Math.random() * 60;
+    const petalLength = 60 + Math.random() * 80;
+    const hue = f * 50 + Math.random() * 30;
+    for (let p = 0; p < PETALS; p++) {
+      const t = (p / PETALS) * Math.PI * 2;
+      const r = petalLength * Math.abs(Math.cos(t * (3 + Math.floor(Math.random() * 3))));
+      particles.push({
+        baseAngle,
+        baseRadius,
+        petalAngle: t,
+        petalRadius: r,
+        hue: hue + Math.random() * 20,
+        size: 2 + Math.random() * 3,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.3 + Math.random() * 0.3,
+        orbitSpeed: 0.003 + Math.random() * 0.003,
+      });
+    }
+  }
+
+  let time = 0;
+
+  function animate() {
+    time += 0.006;
+    ctx.fillStyle = 'rgba(10, 10, 15, 0.05)';
+    ctx.fillRect(0, 0, W, H);
+
+    for (const p of particles) {
+      const bloom = 0.5 + Math.sin(time * p.speed + p.phase) * 0.5;
+      const currentAngle = p.baseAngle + time * p.orbitSpeed;
+
+      const px = Math.cos(currentAngle) * p.baseRadius;
+      const py = Math.sin(currentAngle) * p.baseRadius;
+
+      const petalX = Math.cos(p.petalAngle) * p.petalRadius * bloom;
+      const petalY = Math.sin(p.petalAngle) * p.petalRadius * bloom;
+
+      const x = cx + px + petalX;
+      const y = cy + py + petalY;
+
+      const alpha = 0.2 + bloom * 0.5;
+      const size = p.size * (0.3 + bloom * 0.7);
+      const hue = p.hue + Math.sin(time + p.phase) * 15;
+
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${hue}, 75%, ${50 + bloom * 25}%, ${alpha})`;
+      ctx.fill();
+
+      if (bloom > 0.7) {
+        const grad = ctx.createRadialGradient(x, y, 0, x, y, size * 4);
+        grad.addColorStop(0, `hsla(${hue + 20}, 80%, 70%, ${bloom * 0.05})`);
+        grad.addColorStop(1, 'transparent');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(x, y, size * 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

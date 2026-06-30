@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cellular</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #05050a; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(100,255,150,0.12); font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Cellular · game of life</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const cellSize = 6;
+  const cols = Math.ceil(W / cellSize);
+  const rows = Math.ceil(H / cellSize);
+  let grid = [];
+
+  function initGrid() {
+    grid = [];
+    for (let y = 0; y < rows; y++) {
+      grid[y] = [];
+      for (let x = 0; x < cols; x++) {
+        grid[y][x] = Math.random() < 0.2 ? 1 : 0;
+      }
+    }
+  }
+  initGrid();
+
+  function countNeighbors(g, x, y) {
+    let sum = 0;
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        const nx = (x + dx + cols) % cols;
+        const ny = (y + dy + rows) % rows;
+        sum += g[ny][nx];
+      }
+    }
+    return sum;
+  }
+
+  function nextGen() {
+    const newGrid = [];
+    for (let y = 0; y < rows; y++) {
+      newGrid[y] = [];
+      for (let x = 0; x < cols; x++) {
+        const neighbors = countNeighbors(grid, x, y);
+        const alive = grid[y][x];
+        if (alive && (neighbors < 2 || neighbors > 3)) newGrid[y][x] = 0;
+        else if (!alive && neighbors === 3) newGrid[y][x] = 1;
+        else newGrid[y][x] = alive;
+      }
+    }
+    grid = newGrid;
+  }
+
+  let time = 0;
+
+  function animate() {
+    time += 0.005;
+    ctx.fillStyle = 'rgba(5, 5, 10, 0.02)';
+    ctx.fillRect(0, 0, W, H);
+
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        if (grid[y][x]) {
+          const hue = 120 + Math.sin(x * 0.1 + y * 0.1 + time) * 30;
+          ctx.fillStyle = `hsla(${hue}, 80%, 55%, 0.6)`;
+          ctx.fillRect(x * cellSize, y * cellSize, cellSize - 0.5, cellSize - 0.5);
+        }
+      }
+    }
+
+    if (Math.floor(time * 60) % 4 === 0) nextGen();
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+
+  document.addEventListener('click', initGrid);
+</script>
+</body>
+</html>

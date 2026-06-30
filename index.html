@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Animation Playground — Systems Console</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-void: #030408;
+    --bg-panel: rgba(12, 16, 28, 0.65);
+    
+    --glow-cyan: #00f2fe;
+    --glow-violet: #8b5cf6;
+    --glow-gold: #fbbf24;
+    --glow-orange: #f97316;
+    --glow-white: rgba(255, 255, 255, 0.15);
+    
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    
+    --font-display: "Space Grotesk", sans-serif;
+    --font-body: "Plus Jakarta Sans", sans-serif;
+    --font-mono: "JetBrains Mono", monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  body {
+    background: var(--bg-void);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 3rem 2rem;
+    overflow-x: hidden;
+    position: relative;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Radial glow mesh background */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    background: 
+      radial-gradient(1000px circle at 50% -10%, rgba(139, 92, 246, 0.08), transparent 70%),
+      radial-gradient(1200px circle at 5% 50%, rgba(0, 242, 254, 0.05), transparent 60%),
+      radial-gradient(900px circle at 95% 95%, rgba(251, 191, 36, 0.03), transparent 60%);
+    pointer-events: none;
+  }
+
+  .telemetry-grid {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-size: 80px 80px;
+    background-image: 
+      linear-gradient(to right, rgba(255, 255, 255, 0.008) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.008) 1px, transparent 1px);
+    mask-image: radial-gradient(circle at 50% 30%, black 20%, transparent 90%);
+    -webkit-mask-image: radial-gradient(circle at 50% 30%, black 20%, transparent 90%);
+    pointer-events: none;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 3.5rem;
+  }
+
+  h1 {
+    font-family: var(--font-display);
+    font-size: 2.2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #ffffff, var(--glow-cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.5rem;
+  }
+
+  .subtitle {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.15em;
+    color: var(--text-secondary);
+    opacity: 0.7;
+    text-transform: uppercase;
+  }
+
+  .section {
+    width: 100%;
+    max-width: 1100px;
+    margin-bottom: 3.5rem;
+  }
+
+  .section h2 {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-primary);
+    opacity: 0.65;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .section h2::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, rgba(255, 255, 255, 0.1), transparent);
+  }
+
+  .section h2 .badge {
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    background: rgba(251, 191, 36, 0.12);
+    color: var(--glow-gold);
+    border: 1px solid rgba(251, 191, 36, 0.2);
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .card {
+    background: var(--bg-panel);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    padding: 2.25rem 2rem;
+    text-align: center;
+    text-decoration: none;
+    color: #fff;
+    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .card:hover {
+    transform: translateY(-5px) scale(1.02);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 10px 30px rgba(255, 255, 255, 0.04);
+  }
+
+  .icon {
+    font-size: 2.2rem;
+    opacity: 0.85;
+    transition: transform 0.3s ease;
+  }
+  .card:hover .icon {
+    transform: scale(1.1);
+  }
+
+  .name {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .desc {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  /* Super Pick Styling */
+  .super {
+    border-color: rgba(0, 242, 254, 0.15);
+    background: rgba(0, 242, 254, 0.01);
+    position: relative;
+  }
+  .super::after {
+    content: "★ SUPER";
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--glow-cyan);
+    opacity: 0.85;
+  }
+  .super:hover {
+    border-color: var(--glow-cyan);
+    background: rgba(0, 242, 254, 0.03);
+    box-shadow: 0 10px 30px rgba(0, 242, 254, 0.1);
+  }
+
+  /* Favorite Pick Styling */
+  .fav {
+    border-color: rgba(251, 191, 36, 0.15);
+    background: rgba(251, 191, 36, 0.01);
+    position: relative;
+  }
+  .fav::after {
+    content: "★ FAVORITE";
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--glow-gold);
+    opacity: 0.85;
+  }
+  .fav:hover {
+    border-color: var(--glow-gold);
+    background: rgba(251, 191, 36, 0.03);
+    box-shadow: 0 10px 30px rgba(251, 191, 36, 0.1);
+  }
+
+  /* New Review Pick Styling */
+  .new-card {
+    border-color: rgba(249, 115, 22, 0.18);
+    background: rgba(249, 115, 22, 0.01);
+    position: relative;
+  }
+  .new-card::after {
+    content: "NEW";
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--glow-orange);
+    background: rgba(249, 115, 22, 0.1);
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+  }
+  .new-card:hover {
+    border-color: var(--glow-orange);
+    background: rgba(249, 115, 22, 0.03);
+    box-shadow: 0 10px 30px rgba(249, 115, 22, 0.1);
+  }
+</style>
+</head>
+<body>
+  <div class="telemetry-grid" aria-hidden="true"></div>
+  <header>
+    <h1>Opening Animation Ideas</h1>
+    <p class="subtitle">new → review → favorite or explore</p>
+  </header>
+
+  <!-- Section 1: New for Review (Batch 3) -->
+  <div class="section">
+    <h2>New for Review <span class="badge" style="background:rgba(249, 115, 22, 0.12); color:var(--glow-orange); border-color:rgba(249, 115, 22, 0.2);">batch 3</span></h2>
+    <div class="grid">
+      <a class="card new-card" href="particle-swarm.html">
+        <div class="icon">🐝</div>
+        <div class="name">Particle Swarm</div>
+        <div class="desc">Cohesion, alignment, and separation flocking</div>
+      </a>
+      <a class="card new-card" href="particle-fire.html">
+        <div class="icon">🔥</div>
+        <div class="name">Particle Fire</div>
+        <div class="desc">Upward flame particles, click for burst</div>
+      </a>
+      <a class="card new-card" href="particle-circuit.html">
+        <div class="icon">🔌</div>
+        <div class="name">Particle Circuit</div>
+        <div class="desc">Flowing paths along node connections</div>
+      </a>
+      <a class="card new-card" href="particle-aurora.html">
+        <div class="icon">〰</div>
+        <div class="name">Particle Aurora</div>
+        <div class="desc">Flowing light curtains with wave physics</div>
+      </a>
+      <a class="card new-card" href="particle-bubbles.html">
+        <div class="icon">🫧</div>
+        <div class="name">Particle Bubbles</div>
+        <div class="desc">Iridescent floating bubbles, click to add</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Section 2: Super Highlight -->
+  <div class="section">
+    <h2>Super Highlight <span class="badge" style="background:rgba(0, 242, 254, 0.12); color:var(--glow-cyan); border-color:rgba(0, 242, 254, 0.2);">top picks</span></h2>
+    <div class="grid">
+      <a class="card super" href="particle-lattice.html">
+        <div class="icon">◇</div>
+        <div class="name">Lattice</div>
+        <div class="desc">Rotating 3D cube grid (no mouse reactive)</div>
+      </a>
+      <a class="card super" href="particle-supernova.html">
+        <div class="icon">✦</div>
+        <div class="name">Supernova</div>
+        <div class="desc">Massive stellar explosion with shockwave shells</div>
+      </a>
+      <a class="card super" href="particle-blackhole.html">
+        <div class="icon">◉</div>
+        <div class="name">Black Hole</div>
+        <div class="desc">Particles spiraling into a gravitational singularity</div>
+      </a>
+      <a class="card super" href="particle-solarstorm.html">
+        <div class="icon">◉</div>
+        <div class="name">Solar Storm</div>
+        <div class="desc">Coronal mass ejection from the sun</div>
+      </a>
+      <a class="card super" href="particle-tornado.html">
+        <div class="icon">🌀</div>
+        <div class="name">Tornado</div>
+        <div class="desc">Funnel vortex tearing across</div>
+      </a>
+      <a class="card super" href="particle-3d-engine.html">
+        <div class="icon">◇</div>
+        <div class="name">3D Engine</div>
+        <div class="desc">True perspective 3D objects — mouse to orbit</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Section 3: Favorites -->
+  <div class="section">
+    <h2>Favorites <span class="badge">highlighted</span></h2>
+    <div class="grid">
+      <a class="card fav" href="particle-network.html">
+        <div class="icon">✦</div>
+        <div class="name">Particle Network</div>
+        <div class="desc">2D canvas particles with connecting lines, mouse attraction</div>
+      </a>
+      <a class="card fav" href="particle-spiral.html">
+        <div class="icon">🌀</div>
+        <div class="name">Particle Spiral</div>
+        <div class="desc">Spiral orbiting particles, click to burst</div>
+      </a>
+      <a class="card fav" href="particle-rings.html">
+        <div class="icon">◎</div>
+        <div class="name">Particle Rings</div>
+        <div class="desc">Tilted orbiting particle rings</div>
+      </a>
+      <a class="card fav" href="particle-fireflies.html">
+        <div class="icon">✦</div>
+        <div class="name">Fireflies (v2)</div>
+        <div class="desc">Gentle glowing fireflies, mouse to scatter</div>
+      </a>
+      <a class="card fav" href="particle-constellation.html">
+        <div class="icon">✧</div>
+        <div class="name">Constellation (v2)</div>
+        <div class="desc">Star map with connections, click to reshuffle</div>
+      </a>
+      <a class="card fav" href="particle-flowers.html">
+        <div class="icon">◐</div>
+        <div class="name">Cosmos</div>
+        <div class="desc">Blooming petal orbits (no mouse reactive)</div>
+      </a>
+      <a class="card fav" href="orbit-rings.html">
+        <div class="icon">◎</div>
+        <div class="name">Orbit Rings</div>
+        <div class="desc">Concentric particle rings orbiting at different speeds</div>
+      </a>
+      <a class="card fav" href="ripple-pulse.html">
+        <div class="icon">◯</div>
+        <div class="name">Ripple Pulse</div>
+        <div class="desc">Concentric rings pulsing and drifting</div>
+      </a>
+      <a class="card fav" href="stardust.html">
+        <div class="icon">✦</div>
+        <div class="name">Stardust</div>
+        <div class="desc">Swirling star field with click explosions</div>
+      </a>
+      <a class="card fav" href="spiral-galaxy.html">
+        <div class="icon">🌀</div>
+        <div class="name">Spiral Galaxy</div>
+        <div class="desc">Swirling star arms with twinkle and depth</div>
+      </a>
+      <a class="card fav" href="crystal-growth.html">
+        <div class="icon">◇</div>
+        <div class="name">Crystal Growth</div>
+        <div class="desc">Geometric crystal formations growing over time</div>
+      </a>
+      <a class="card fav" href="warp-speed.html">
+        <div class="icon">✦</div>
+        <div class="name">Warp Speed</div>
+        <div class="desc">Hyperspace star field flying toward you</div>
+      </a>
+      <a class="card fav" href="boids.html">
+        <div class="icon">△</div>
+        <div class="name">Boids</div>
+        <div class="desc">Flocking swarm with mouse repulsion</div>
+      </a>
+      <a class="card fav" href="snowfall.html">
+        <div class="icon">✦</div>
+        <div class="name">Snowfall</div>
+        <div class="desc">Gentle winter snow drift</div>
+      </a>
+      <a class="card fav" href="jellyfish.html">
+        <div class="icon">◍</div>
+        <div class="name">Jellyfish</div>
+        <div class="desc">Deep sea drifting jellyfish</div>
+      </a>
+      <a class="card fav" href="particle-fountain.html">
+        <div class="icon">⛲</div>
+        <div class="name">Fountain</div>
+        <div class="desc">Particles arcing upward with gravity, click for burst</div>
+      </a>
+      <a class="card fav" href="particle-dna.html">
+        <div class="icon">🧬</div>
+        <div class="name">DNA</div>
+        <div class="desc">Rotating double helix with depth</div>
+      </a>
+      <a class="card fav" href="particle-drift.html">
+        <div class="icon">✦</div>
+        <div class="name">Drift</div>
+        <div class="desc">Windborne particles gently floating</div>
+      </a>
+      <a class="card fav" href="particle-storm.html">
+        <div class="icon">⚡</div>
+        <div class="name">Storm</div>
+        <div class="desc">Lightning strikes with driving rain</div>
+      </a>
+      <a class="card fav" href="particle-tide.html">
+        <div class="icon">〰</div>
+        <div class="name">Tide</div>
+        <div class="desc">Rolling wave layers with connecting lines</div>
+      </a>
+      <a class="card fav" href="particle-prism.html">
+        <div class="icon">◈</div>
+        <div class="name">Prism</div>
+        <div class="desc">Rainbow light spectrum rays</div>
+      </a>
+      <a class="card fav" href="particle-lantern.html">
+        <div class="icon">◌</div>
+        <div class="name">Lantern</div>
+        <div class="desc">Floating sky lanterns drifting up</div>
+      </a>
+      <a class="card fav" href="particle-volcano.html">
+        <div class="icon">🔥</div>
+        <div class="name">Volcano</div>
+        <div class="desc">Erupting lava and ash plume</div>
+      </a>
+      <a class="card fav" href="particle-avalanche.html">
+        <div class="icon">△</div>
+        <div class="name">Avalanche</div>
+        <div class="desc">Cascading tumbling rubble</div>
+      </a>
+      <a class="card fav" href="particle-monolith.html">
+        <div class="icon">▦</div>
+        <div class="name">Monolith</div>
+        <div class="desc">Particles assembling into a towering obelisk</div>
+      </a>
+      <a class="card fav" href="particle-fractal.html">
+        <div class="icon">◈</div>
+        <div class="name">Fractal</div>
+        <div class="desc">Particles tracing the Mandelbrot set — click to zoom</div>
+      </a>
+      <a class="card fav" href="particle-slime-mold.html">
+        <div class="icon">◍</div>
+        <div class="name">Slime Mold</div>
+        <div class="desc">Physarum polycephalum simulation — click to feed</div>
+      </a>
+      <a class="card fav" href="particle-tsunami.html">
+        <div class="icon">〰</div>
+        <div class="name">Tsunami</div>
+        <div class="desc">Massive wall of water rolling in</div>
+      </a>
+      <a class="card fav" href="particle-phoenix.html">
+        <div class="icon">🔥</div>
+        <div class="name">Phoenix</div>
+        <div class="desc">Fire bird rising from embers</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Section 4: More to Explore -->
+  <div class="section">
+    <h2>More to Explore</h2>
+    <div class="grid">
+      <a class="card" href="particle-morph.html">
+        <div class="icon">◈</div>
+        <div class="name">Particle Morph</div>
+        <div class="desc">Particles morph between shapes on click</div>
+      </a>
+      <a class="card" href="particle-mandala.html">
+        <div class="icon">◈</div>
+        <div class="name">Mandala</div>
+        <div class="desc">Symmetric geometric rings with connecting lines</div>
+      </a>
+      <a class="card" href="particle-eclipse.html">
+        <div class="icon">◉</div>
+        <div class="name">Eclipse</div>
+        <div class="desc">Corona rings around a dark center</div>
+      </a>
+      <a class="card" href="particle-ink.html">
+        <div class="icon">◌</div>
+        <div class="name">Ink</div>
+        <div class="desc">Ink drops spreading on paper, click to drop</div>
+      </a>
+      <a class="card" href="plasma.html">
+        <div class="icon">◉</div>
+        <div class="name">Plasma</div>
+        <div class="desc">Flowing energy field with smooth gradients</div>
+      </a>
+      <a class="card" href="vortex.html">
+        <div class="icon">🌀</div>
+        <div class="name">Vortex</div>
+        <div class="desc">Spiraling abyss of particles</div>
+      </a>
+      <a class="card" href="lissajous.html">
+        <div class="icon">~</div>
+        <div class="name">Lissajous</div>
+        <div class="desc">Oscilloscope curve patterns</div>
+      </a>
+      <a class="card" href="lava-lamp.html">
+        <div class="icon">◍</div>
+        <div class="name">Lava Lamp</div>
+        <div class="desc">Oozing organic blobs rising and falling</div>
+      </a>
+      <a class="card" href="moire.html">
+        <div class="icon">◈</div>
+        <div class="name">Moire</div>
+        <div class="desc">Overlapping interference ring patterns</div>
+      </a>
+      <a class="card" href="solar-flare.html">
+        <div class="icon">◉</div>
+        <div class="name">Solar Flare</div>
+        <div class="desc">Coronal loops emanating from a sun</div>
+      </a>
+      <a class="card" href="dendrite.html">
+        <div class="icon">⚡</div>
+        <div class="name">Dendrite</div>
+        <div class="desc">Branching lightning tree at cursor</div>
+      </a>
+      <a class="card" href="ripple-pond.html">
+        <div class="icon">◌</div>
+        <div class="name">Ripple Pond</div>
+        <div class="desc">Water ripples from raindrops, click to add</div>
+      </a>
+      <a class="card" href="bokeh.html">
+        <div class="icon">◌</div>
+        <div class="name">Bokeh</div>
+        <div class="desc">Floating lens light orbs with mouse repel</div>
+      </a>
+      <a class="card" href="hologram.html">
+        <div class="icon">◈</div>
+        <div class="name">Hologram</div>
+        <div class="desc">Scan-line projection with glowing rings</div>
+      </a>
+      <a class="card" href="ribbon-dance.html">
+        <div class="icon">~</div>
+        <div class="name">Ribbon Dance</div>
+        <div class="desc">Flowing tendrils with mouse attraction</div>
+      </a>
+      <a class="card" href="gravity-well.html">
+        <div class="icon">◎</div>
+        <div class="name">Gravity Well</div>
+        <div class="desc">Particles orbiting a gravitational center</div>
+      </a>
+      <a class="card" href="pixel-melt.html">
+        <div class="icon">▤</div>
+        <div class="name">Pixel Melt</div>
+        <div class="desc">Dripping pixel columns with color shift</div>
+      </a>
+      <a class="card" href="cymatics.html">
+        <div class="icon">◍</div>
+        <div class="name">Cymatics</div>
+        <div class="desc">Vibrational wave patterns, mouse reactive</div>
+      </a>
+      <a class="card" href="neon-tunnel.html">
+        <div class="icon">◎</div>
+        <div class="name">Neon Tunnel</div>
+        <div class="desc">Infinite 3D perspective tunnel with neon rings</div>
+      </a>
+      <a class="card" href="fireflies.html">
+        <div class="icon">✦</div>
+        <div class="name">Fireflies (v1)</div>
+        <div class="desc">Gentle floating glow dots with mouse repulsion</div>
+      </a>
+      <a class="card" href="constellation.html">
+        <div class="icon">✧</div>
+        <div class="name">Constellation (v1)</div>
+        <div class="desc">Self-drawing star map with connecting lines</div>
+      </a>
+      <a class="card" href="kaleidoscope.html">
+        <div class="icon">◈</div>
+        <div class="name">Kaleidoscope</div>
+        <div class="desc">Mirrored symmetry with mouse-reactive center</div>
+      </a>
+      <a class="card" href="cellular.html">
+        <div class="icon">▤</div>
+        <div class="name">Cellular</div>
+        <div class="desc">Conway's Game of Life, click to reset</div>
+      </a>
+      <a class="card" href="magnet.html">
+        <div class="icon">◉</div>
+        <div class="name">Magnet</div>
+        <div class="desc">Iron filings around two magnetic poles</div>
+      </a>
+      <a class="card" href="bubble.html">
+        <div class="icon">◌</div>
+        <div class="name">Bubble</div>
+        <div class="desc">Iridescent floating bubbles, click for more</div>
+      </a>
+      <a class="card" href="fractal-tree.html">
+        <div class="icon">⚡</div>
+        <div class="name">Fractal Tree</div>
+        <div class="desc">Recursive tree growing at cursor</div>
+      </a>
+      <a class="card" href="confetti.html">
+        <div class="icon">✦</div>
+        <div class="name">Confetti</div>
+        <div class="desc">Celebration shower, click to burst</div>
+      </a>
+      <a class="card" href="rorschach.html">
+        <div class="icon">◈</div>
+        <div class="name">Rorschach</div>
+        <div class="desc">Symmetrical inkblot patterns</div>
+      </a>
+      <a class="card" href="digital-rain.html">
+        <div class="icon">⎔</div>
+        <div class="name">Digital Rain</div>
+        <div class="desc">Matrix-style falling code characters</div>
+      </a>
+      <a class="card" href="aurora.html">
+        <div class="icon">〰</div>
+        <div class="name">Aurora</div>
+        <div class="desc">Flowing light curtains with mouse influence</div>
+      </a>
+      <a class="card" href="kinetic-rise.html">
+        <div class="icon">△</div>
+        <div class="name">Kinetic Rise</div>
+        <div class="desc">Geometric shapes ascending from below</div>
+      </a>
+      <a class="card" href="morphing-blob.html">
+        <div class="icon">◐</div>
+        <div class="name">Morphing Blob</div>
+        <div class="desc">Pure CSS organic shape morphing</div>
+      </a>
+      <a class="card" href="grid-reveal.html">
+        <div class="icon">▦</div>
+        <div class="name">Grid Reveal</div>
+        <div class="desc">Staggered tile reveal with diagonal delay</div>
+      </a>
+      <a class="card" href="wave-text.html">
+        <div class="icon">〰</div>
+        <div class="name">Wave Text</div>
+        <div class="desc">Sine wave particles forming text</div>
+      </a>
+      <a class="card" href="liquid-distortion.html">
+        <div class="icon">🌀</div>
+        <div class="name">Liquid Distortion</div>
+        <div class="desc">Perlin-style flow field, mouse interactive</div>
+      </a>
+      <a class="card" href="glitch-intro.html">
+        <div class="icon">⚡</div>
+        <div class="name">Glitch Intro</div>
+        <div class="desc">CRT scanlines, video noise, chromatic glitch</div>
+      </a>
+    </div>
+  </div>
+</body>
+</html>

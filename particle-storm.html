@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Particle Storm</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #06060e; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.08); font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Storm · lightning & rain</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const raindrops = [];
+  const bolts = [];
+
+  for (let i = 0; i < 200; i++) {
+    raindrops.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      speed: 8 + Math.random() * 12,
+      length: 10 + Math.random() * 15,
+      alpha: 0.1 + Math.random() * 0.2,
+      wind: (Math.random() - 0.5) * 0.5,
+    });
+  }
+
+  function createBolt() {
+    const x = Math.random() * W;
+    const y = -20;
+    const segments = 8 + Math.floor(Math.random() * 10);
+    const points = [{ x, y }];
+    let cx = x, cy = y;
+    for (let i = 0; i < segments; i++) {
+      cx += (Math.random() - 0.5) * 40;
+      cy += 20 + Math.random() * 30;
+      points.push({ x: cx, y: cy });
+    }
+    bolts.push({ points, life: 1, width: 1.5 + Math.random() * 1.5, hue: 220 + Math.random() * 20 });
+  }
+
+  let time = 0;
+  let flash = 0;
+
+  function animate() {
+    time += 0.005;
+    flash = Math.max(0, flash - 0.02);
+
+    if (flash > 0) {
+      ctx.fillStyle = `rgba(200, 220, 255, ${flash * 0.06})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    ctx.fillStyle = `rgba(6, 6, 14, ${0.06 + flash * 0.02})`;
+    ctx.fillRect(0, 0, W, H);
+
+    for (const r of raindrops) {
+      r.x += r.wind;
+      r.y += r.speed;
+      if (r.y > H + 20) { r.y = -20; r.x = Math.random() * W; }
+
+      ctx.beginPath();
+      ctx.moveTo(r.x, r.y);
+      ctx.lineTo(r.x - r.wind * 2, r.y - r.length);
+      ctx.strokeStyle = `hsla(220, 60%, 60%, ${r.alpha})`;
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+
+    for (let i = bolts.length - 1; i >= 0; i--) {
+      const b = bolts[i];
+      b.life -= 0.02;
+
+      if (b.life <= 0) { bolts.splice(i, 1); continue; }
+      if (b.life > 0.8) flash = 0.8;
+
+      ctx.beginPath();
+      ctx.moveTo(b.points[0].x, b.points[0].y);
+      for (let j = 1; j < b.points.length; j++) {
+        ctx.lineTo(b.points[j].x, b.points[j].y);
+      }
+      ctx.strokeStyle = `hsla(${b.hue}, 80%, ${60 + b.life * 30}%, ${b.life * 0.6})`;
+      ctx.lineWidth = b.width * b.life;
+      ctx.stroke();
+
+      const glow = ctx.createRadialGradient(b.points[0].x, b.points[0].y, 0, b.points[0].x, b.points[0].y, 40);
+      glow.addColorStop(0, `hsla(${b.hue}, 90%, 80%, ${b.life * 0.08})`);
+      glow.addColorStop(1, 'transparent');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(b.points[0].x, b.points[0].y, 40, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (Math.random() < 0.008) createBolt();
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

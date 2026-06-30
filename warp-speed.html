@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Warp Speed</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.1); font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Warp Speed · hyperspace star field</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const stars = [];
+  const COUNT = 400;
+
+  for (let i = 0; i < COUNT; i++) {
+    stars.push({
+      x: (Math.random() - 0.5) * W * 2,
+      y: (Math.random() - 0.5) * H * 2,
+      z: Math.random() * 800,
+      maxZ: 800,
+      size: 0.5 + Math.random() * 1.5,
+      hue: 200 + Math.random() * 60,
+    });
+  }
+
+  let time = 0;
+  const cx = W / 2;
+  const cy = H / 2;
+
+  function animate() {
+    time += 0.005;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
+    ctx.fillRect(0, 0, W, H);
+
+    for (const s of stars) {
+      s.z -= 5;
+
+      if (s.z < 1) {
+        s.x = (Math.random() - 0.5) * W * 2;
+        s.y = (Math.random() - 0.5) * H * 2;
+        s.z = s.maxZ;
+      }
+
+      const k = 300 / s.z;
+      const px = s.x * k + cx;
+      const py = s.y * k + cy;
+      const size = s.size * (1 - s.z / s.maxZ) * 3;
+      const alpha = Math.min(1, (1 - s.z / s.maxZ) * 2);
+
+      if (px < -50 || px > W + 50 || py < -50 || py > H + 50) continue;
+
+      const prevZ = s.z + 5;
+      const prevK = 300 / prevZ;
+      const ppx = s.x * prevK + cx;
+      const ppy = s.y * prevK + cy;
+
+      ctx.beginPath();
+      ctx.moveTo(ppx, ppy);
+      ctx.lineTo(px, py);
+      ctx.strokeStyle = `hsla(${s.hue}, 80%, ${60 + (1 - s.z / s.maxZ) * 30}%, ${alpha * 0.4})`;
+      ctx.lineWidth = size * 0.5;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(px, py, size, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${s.hue}, 80%, ${80}%, ${alpha * 0.8})`;
+      ctx.fill();
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

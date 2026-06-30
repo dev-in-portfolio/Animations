@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ripple Pond</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #060812; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.1); font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Ripple Pond · click to drop a stone</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const ripples = [];
+  let time = 0;
+
+  document.addEventListener('click', (e) => {
+    ripples.push({
+      x: e.clientX,
+      y: e.clientY,
+      radius: 2,
+      maxRadius: 60 + Math.random() * 80,
+      speed: 0.3 + Math.random() * 0.4,
+      alpha: 0.5,
+      hue: 190 + Math.random() * 40,
+      phase: Math.random() * Math.PI * 2,
+    });
+  });
+
+  setInterval(() => {
+    if (ripples.length < 6) {
+      ripples.push({
+        x: 50 + Math.random() * (W - 100),
+        y: 50 + Math.random() * (H - 100),
+        radius: 2,
+        maxRadius: 40 + Math.random() * 60,
+        speed: 0.2 + Math.random() * 0.3,
+        alpha: 0.3,
+        hue: 190 + Math.random() * 40,
+        phase: Math.random() * Math.PI * 2,
+      });
+    }
+  }, 2000);
+
+  function animate() {
+    time += 0.005;
+    ctx.fillStyle = 'rgba(6, 8, 18, 0.04)';
+    ctx.fillRect(0, 0, W, H);
+
+    for (let i = ripples.length - 1; i >= 0; i--) {
+      const r = ripples[i];
+      r.radius += r.speed;
+
+      r.alpha -= 0.003;
+
+      if (r.radius > r.maxRadius || r.alpha <= 0) {
+        ripples.splice(i, 1);
+        continue;
+      }
+
+      const alpha = r.alpha * (1 - r.radius / r.maxRadius);
+
+      ctx.beginPath();
+      ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
+      ctx.strokeStyle = `hsla(${r.hue + Math.sin(time + r.phase) * 10}, 80%, 60%, ${Math.max(0, alpha)})`;
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      if (r.radius > 10) {
+        ctx.beginPath();
+        ctx.arc(r.x, r.y, r.radius * 0.6, 0, Math.PI * 2);
+        ctx.strokeStyle = `hsla(${r.hue + 20 + Math.sin(time + r.phase) * 10}, 70%, 50%, ${Math.max(0, alpha * 0.4)})`;
+        ctx.lineWidth = 0.6;
+        ctx.stroke();
+      }
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

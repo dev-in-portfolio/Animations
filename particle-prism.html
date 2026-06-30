@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Particle Prism</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #080808; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.08); font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Prism · light spectrum</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const cx = W / 2;
+  const cy = H / 2;
+  const RAYS = 7;
+  const PARTICLES_PER_RAY = 50;
+  const particles = [];
+
+  for (let r = 0; r < RAYS; r++) {
+    const angle = (r / RAYS) * Math.PI * 2 - Math.PI / 2;
+    const hue = (r / RAYS) * 300;
+    for (let i = 0; i < PARTICLES_PER_RAY; i++) {
+      const t = i / PARTICLES_PER_RAY;
+      const dist = 30 + t * 180;
+      const spread = (1 - t) * 12;
+      particles.push({
+        angle,
+        dist,
+        spread,
+        t,
+        hue,
+        phase: Math.random() * Math.PI * 2,
+        size: 2 + (1 - t) * 4,
+        alpha: 0.4 - t * 0.3,
+        pulseSpeed: 0.5 + Math.random() * 0.5,
+      });
+    }
+  }
+
+  let time = 0;
+
+  function animate() {
+    time += 0.004;
+    ctx.fillStyle = 'rgba(8, 8, 8, 0.04)';
+    ctx.fillRect(0, 0, W, H);
+
+    for (const p of particles) {
+      const pulse = 0.7 + Math.sin(time * p.pulseSpeed + p.phase) * 0.3;
+      const a = p.angle + time * (0.1 + p.t * 0.05);
+      const r = p.dist + Math.sin(time + p.phase + p.t * 10) * p.spread;
+      const x = cx + Math.cos(a) * r;
+      const y = cy + Math.sin(a) * r;
+
+      const alpha = p.alpha * pulse;
+      const size = p.size * (0.5 + pulse * 0.5);
+      const hue = p.hue + Math.sin(time * 0.5 + p.phase) * 15;
+
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${hue}, 90%, ${50 + pulse * 25}%, ${alpha})`;
+      ctx.fill();
+
+      if (pulse > 0.6) {
+        const grad = ctx.createRadialGradient(x, y, 0, x, y, size * 4);
+        grad.addColorStop(0, `hsla(${hue}, 90%, 65%, ${alpha * 0.05})`);
+        grad.addColorStop(1, 'transparent');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(x, y, size * 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

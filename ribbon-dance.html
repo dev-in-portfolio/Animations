@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ribbon Dance</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #05050a; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.1); font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Ribbon Dance · flowing tendrils</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const ribbons = [];
+  const COUNT = 6;
+  const POINTS = 40;
+
+  for (let r = 0; r < COUNT; r++) {
+    const points = [];
+    for (let i = 0; i < POINTS; i++) {
+      const t = i / POINTS;
+      points.push({
+        t,
+        x: W / 2,
+        y: H / 2,
+        baseAngle: (r / COUNT) * Math.PI * 2,
+        radius: 30 + t * 120,
+      });
+    }
+    ribbons.push({
+      points,
+      hue: 200 + r * 25,
+      alpha: 0.3 + r * 0.05,
+      width: 3 + r * 1.5,
+    });
+  }
+
+  let time = 0;
+  const mouse = { x: W/2, y: H/2 };
+
+  document.addEventListener('mousemove', (e) => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+  });
+
+  function animate() {
+    time += 0.004;
+    ctx.fillStyle = 'rgba(5, 5, 10, 0.04)';
+    ctx.fillRect(0, 0, W, H);
+
+    const cx = W / 2 + (mouse.x - W / 2) * 0.05;
+    const cy = H / 2 + (mouse.y - H / 2) * 0.05;
+
+    for (const rib of ribbons) {
+      const points = rib.points;
+
+      for (let i = 0; i < POINTS; i++) {
+        const p = points[i];
+        const angle = p.baseAngle + time * (0.2 + p.t * 0.4) + Math.sin(time * 0.5 + p.t * 2) * 0.5;
+        const wobble = Math.sin(time * 0.8 + p.t * 3 + p.baseAngle) * (10 + p.t * 20);
+        const r = p.radius + wobble + Math.sin(time * 0.3 + p.baseAngle) * 15;
+        p.x = cx + Math.cos(angle) * r;
+        p.y = cy + Math.sin(angle) * r * 0.6;
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < POINTS - 1; i++) {
+        const xc = (points[i].x + points[i + 1].x) / 2;
+        const yc = (points[i].y + points[i + 1].y) / 2;
+        ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
+      }
+      ctx.strokeStyle = `hsla(${rib.hue + Math.sin(time + rib.hue) * 15}, 80%, 60%, ${rib.alpha})`;
+      ctx.lineWidth = rib.width;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

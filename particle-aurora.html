@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Particle Aurora</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #050510; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.08); font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Aurora · flowing light curtains</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const STREAMS = 5;
+  const POINTS_PER_STREAM = 60;
+  const particles = [];
+
+  for (let s = 0; s < STREAMS; s++) {
+    const baseX = (s / STREAMS) * W + Math.random() * 80;
+    const hue = 160 + s * 30 + Math.random() * 20;
+    for (let i = 0; i < POINTS_PER_STREAM; i++) {
+      const t = i / POINTS_PER_STREAM;
+      particles.push({
+        baseX,
+        t,
+        y: t * H * 0.7 + H * 0.1,
+        hue,
+        size: 3 + Math.random() * 5,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.3 + Math.random() * 0.4,
+        amp: 30 + Math.random() * 60,
+        freq: 0.005 + Math.random() * 0.01,
+      });
+    }
+  }
+
+  let time = 0;
+
+  function animate() {
+    time += 0.003;
+    ctx.fillStyle = 'rgba(5, 5, 16, 0.02)';
+    ctx.fillRect(0, 0, W, H);
+
+    for (let s = 0; s < STREAMS; s++) {
+      const streamParticles = particles.slice(s * POINTS_PER_STREAM, (s + 1) * POINTS_PER_STREAM);
+
+      for (let i = 0; i < streamParticles.length - 1; i++) {
+        const a = streamParticles[i];
+        const b = streamParticles[i + 1];
+
+        const ax = a.baseX + Math.sin(time * a.speed + a.phase + a.y * a.freq) * a.amp
+                 + Math.sin(time * 0.3 + a.phase + a.y * 0.003) * 20;
+        const ay = a.y;
+        const bx = b.baseX + Math.sin(time * b.speed + b.phase + b.y * b.freq) * b.amp
+                 + Math.sin(time * 0.3 + b.phase + b.y * 0.003) * 20;
+        const by = b.y;
+
+        const alpha = 0.15 + Math.sin(time + a.phase + i * 0.1) * 0.1;
+        const hue = a.hue + Math.sin(time * 0.5 + a.phase) * 20;
+
+        ctx.beginPath();
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(bx, by);
+        ctx.strokeStyle = `hsla(${hue}, 80%, ${50 + Math.sin(time + a.phase) * 15}%, ${alpha})`;
+        ctx.lineWidth = a.size * (0.3 + Math.sin(time + a.phase + i * 0.05) * 0.3);
+        ctx.stroke();
+      }
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

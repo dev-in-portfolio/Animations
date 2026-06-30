@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hologram</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #020208; overflow: hidden; height: 100vh; font-family: 'Courier New', monospace; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(0,200,255,0.15); font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Hologram · scan-line projection</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const cx = W / 2;
+  const cy = H / 2;
+
+  let time = 0;
+
+  function drawHoloRing(cx, cy, radius, hue, alpha, offset) {
+    ctx.beginPath();
+    for (let i = 0; i <= 60; i++) {
+      const angle = (i / 60) * Math.PI * 2;
+      const wobble = Math.sin(time * 2 + i * 0.3 + offset) * 3;
+      const x = cx + Math.cos(angle) * (radius + wobble);
+      const y = cy + Math.sin(angle) * (radius * 0.5 + wobble * 0.3);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = `hsla(${hue}, 90%, 60%, ${alpha})`;
+    ctx.lineWidth = 1;
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = `hsla(${hue}, 90%, 60%, ${alpha * 0.5})`;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  function animate() {
+    time += 0.005;
+    ctx.fillStyle = 'rgba(2, 2, 8, 0.1)';
+    ctx.fillRect(0, 0, W, H);
+
+    const scanY = (time * 60) % H;
+
+    ctx.beginPath();
+    for (let i = 0; i <= 60; i++) {
+      const angle = (i / 60) * Math.PI * 2;
+      const wobble = Math.sin(time * 1.5 + i * 0.2) * 4;
+      const r = 120 + Math.sin(time + i * 0.1) * 20;
+      const x = cx + Math.cos(angle) * (r + wobble);
+      const y = cy + Math.sin(angle) * (r * 0.4 + wobble * 0.3);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = `rgba(0, 200, 255, ${0.05 + Math.sin(time) * 0.02})`;
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+
+    drawHoloRing(cx, cy, 80, 190, 0.2, 0);
+    drawHoloRing(cx, cy, 120, 200, 0.15, 1);
+    drawHoloRing(cx, cy, 160, 210, 0.1, 2);
+    drawHoloRing(cx, cy, 200, 220, 0.06, 3);
+
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2 + time * 0.3;
+      const r = 80 + Math.sin(time + i) * 30;
+      const x = cx + Math.cos(angle) * r;
+      const y = cy + Math.sin(angle) * r * 0.4;
+      ctx.beginPath();
+      ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${190 + i * 5}, 90%, 70%, 0.4)`;
+      ctx.fill();
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(0, scanY);
+    ctx.lineTo(W, scanY);
+    ctx.strokeStyle = `rgba(0, 200, 255, ${0.03 + Math.sin(time * 2) * 0.02})`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

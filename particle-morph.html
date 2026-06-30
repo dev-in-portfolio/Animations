@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Particle Morph</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #080810; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.12); font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Particle Morph · click to change shape</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const COUNT = 400;
+  const particles = [];
+
+  function generateShape(type) {
+    const points = [];
+    const cx = W / 2;
+    const cy = H / 2;
+
+    if (type === 'circle') {
+      for (let i = 0; i < COUNT; i++) {
+        const angle = (i / COUNT) * Math.PI * 2;
+        const r = 120 + (Math.random() - 0.5) * 20;
+        points.push({ x: cx + Math.cos(angle) * r, y: cy + Math.sin(angle) * r });
+      }
+    } else if (type === 'square') {
+      for (let i = 0; i < COUNT; i++) {
+        const side = Math.floor(Math.random() * 4);
+        const t = Math.random();
+        const s = 140;
+        if (side === 0) points.push({ x: cx - s + t * s * 2, y: cy - s });
+        else if (side === 1) points.push({ x: cx + s, y: cy - s + t * s * 2 });
+        else if (side === 2) points.push({ x: cx + s - t * s * 2, y: cy + s });
+        else points.push({ x: cx - s, y: cy + s - t * s * 2 });
+      }
+    } else if (type === 'triangle') {
+      for (let i = 0; i < COUNT; i++) {
+        const t = Math.random();
+        const s = 160;
+        const v1 = { x: cx, y: cy - s };
+        const v2 = { x: cx - s * 0.866, y: cy + s * 0.5 };
+        const v3 = { x: cx + s * 0.866, y: cy + s * 0.5 };
+        const r1 = Math.random();
+        const r2 = Math.random();
+        if (r1 + r2 > 1) { r1 = 1 - r1; r2 = 1 - r2; }
+        points.push({
+          x: v1.x + r1 * (v2.x - v1.x) + r2 * (v3.x - v1.x),
+          y: v1.y + r1 * (v2.y - v1.y) + r2 * (v3.y - v1.y),
+        });
+      }
+    } else if (type === 'star') {
+      for (let i = 0; i < COUNT; i++) {
+        const angle = (i / COUNT) * Math.PI * 2;
+        const spikes = 5;
+        const r = (i % Math.floor(COUNT / spikes / 2) < Math.floor(COUNT / spikes / 4))
+          ? 60 + Math.random() * 15
+          : 140 + Math.random() * 15;
+        points.push({ x: cx + Math.cos(angle) * r, y: cy + Math.sin(angle) * r });
+      }
+    } else if (type === 'heart') {
+      for (let i = 0; i < COUNT; i++) {
+        const t = (i / COUNT) * Math.PI * 2;
+        const x = 16 * Math.pow(Math.sin(t), 3);
+        const y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+        const scale = 10;
+        points.push({
+          x: cx + x * scale + (Math.random() - 0.5) * 8,
+          y: cy - y * scale + (Math.random() - 0.5) * 8,
+        });
+      }
+    }
+
+    return points;
+  }
+
+  const shapes = ['circle', 'square', 'triangle', 'star', 'heart'];
+  let shapeIdx = 0;
+  let target = generateShape(shapes[0]);
+
+  for (let i = 0; i < COUNT; i++) {
+    particles.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      tx: target[i].x,
+      ty: target[i].y,
+      size: 2 + Math.random() * 3,
+      hue: 200 + Math.random() * 60,
+      phase: Math.random() * Math.PI * 2,
+    });
+  }
+
+  let time = 0;
+
+  function switchShape() {
+    shapeIdx = (shapeIdx + 1) % shapes.length;
+    target = generateShape(shapes[shapeIdx]);
+    for (let i = 0; i < COUNT; i++) {
+      particles[i].tx = target[i].x;
+      particles[i].ty = target[i].y;
+    }
+  }
+
+  document.addEventListener('click', switchShape);
+  setTimeout(switchShape, 2000);
+
+  function animate() {
+    time += 0.01;
+    ctx.fillStyle = 'rgba(8, 8, 16, 0.08)';
+    ctx.fillRect(0, 0, W, H);
+
+    for (const p of particles) {
+      p.x += (p.tx - p.x) * 0.035;
+      p.y += (p.ty - p.y) * 0.035;
+
+      const wobble = Math.sin(time * 2 + p.phase) * 1.5;
+      const drawX = p.x + wobble;
+      const drawY = p.y + Math.cos(time * 1.5 + p.phase) * 1.5;
+
+      ctx.beginPath();
+      ctx.arc(drawX, drawY, p.size, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${p.hue + Math.sin(time + p.phase) * 15}, 75%, 60%, 0.7)`;
+      ctx.fill();
+
+      const glow = ctx.createRadialGradient(drawX, drawY, 0, drawX, drawY, p.size * 3);
+      glow.addColorStop(0, `hsla(${p.hue + 20}, 80%, 70%, 0.15)`);
+      glow.addColorStop(1, 'transparent');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(drawX, drawY, p.size * 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

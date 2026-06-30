@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Particle Phoenix</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #080404; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.06); font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Phoenix · rising from fire</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const cx = W / 2;
+  const cy = H / 2 + 40;
+  const embers = [];
+  const COUNT = 500;
+
+  function phoenixShape(t) {
+    const wingSpan = 120 + t * 40;
+    const bodyX = Math.sin(t * Math.PI * 2) * wingSpan;
+    const bodyY = -Math.abs(Math.sin(t * Math.PI)) * 100;
+    const headY = bodyY - 30;
+    const wingY = bodyY + Math.sin(t * Math.PI * 4) * 40;
+    const tailX = Math.sin(t * 0.5) * wingSpan * 0.5;
+    const tailY = 60 + Math.abs(Math.sin(t)) * 40;
+
+    if (t < 0.3) {
+      const lt = t / 0.3;
+      return { x: Math.sin(lt * Math.PI) * wingSpan * 0.3, y: -lt * 40 };
+    } else if (t < 0.6) {
+      const lt = (t - 0.3) / 0.3;
+      return { x: bodyX * 0.3 + Math.sin(lt * Math.PI * 2) * 20, y: bodyY * 0.3 + lt * 30 };
+    } else if (t < 0.8) {
+      return { x: bodyX * 0.6 + Math.sin(t * 10) * 10, y: bodyY * 0.6 + Math.sin(t * 8) * 10 };
+    } else {
+      return { x: tailX, y: tailY };
+    }
+  }
+
+  for (let i = 0; i < COUNT; i++) {
+    const t = i / COUNT;
+    const shape = phoenixShape(t);
+    const angle = Math.random() * Math.PI * 2;
+    const r = 150 + Math.random() * 100;
+    embers.push({
+      x: cx + Math.cos(angle) * r,
+      y: cy + Math.sin(angle) * r,
+      tx: cx + shape.x + (Math.random() - 0.5) * 15,
+      ty: cy - shape.y + (Math.random() - 0.5) * 15,
+      size: 1.5 + Math.random() * 3,
+      hue: 20 + Math.random() * 30,
+      phase: Math.random() * Math.PI * 2,
+      speed: 0.008 + Math.random() * 0.015,
+      ember: Math.random() > 0.7,
+    });
+  }
+
+  let time = 0;
+  let formed = false;
+
+  function animate() {
+    time += 0.003;
+    ctx.fillStyle = 'rgba(8, 4, 4, 0.03)';
+    ctx.fillRect(0, 0, W, H);
+
+    let allArrived = true;
+
+    for (const p of embers) {
+      const dx = p.tx - p.x;
+      const dy = p.ty - p.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > 0.5) {
+        allArrived = false;
+        p.x += dx * p.speed;
+        p.y += dy * p.speed;
+      }
+
+      const wobble = formed ? Math.sin(time * 2 + p.phase) : 0;
+      const x = p.x + wobble * (p.ember ? 2 : 0.5);
+      const y = p.y + Math.cos(time * 1.5 + p.phase) * (p.ember ? 3 : 0.5);
+
+      const alpha = formed ? 0.4 + Math.sin(time + p.phase) * 0.2 : 0.1 + (1 - dist / 300) * 0.3;
+      const hue = p.hue + (formed ? Math.sin(time + p.phase) * 15 : 0);
+
+      ctx.beginPath();
+      ctx.arc(x, y, p.size, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${hue}, 100%, ${formed ? 50 + Math.sin(time + p.phase) * 15 : 40}%, ${alpha})`;
+      ctx.fill();
+
+      if (formed && p.ember) {
+        ctx.beginPath();
+        ctx.arc(x, y, p.size * 3, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${hue + 10}, 100%, 60%, 0.03)`;
+        ctx.fill();
+      }
+    }
+
+    if (allArrived && !formed) formed = true;
+
+    if (formed) {
+      const glowGrad = ctx.createRadialGradient(cx, cy - 30, 0, cx, cy - 30, 100);
+      glowGrad.addColorStop(0, 'hsla(30, 100%, 60%, 0.03)');
+      glowGrad.addColorStop(1, 'transparent');
+      ctx.fillStyle = glowGrad;
+      ctx.beginPath();
+      ctx.arc(cx, cy - 30, 100, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

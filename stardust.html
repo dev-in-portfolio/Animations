@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stardust</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.1); font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Stardust · swirling star field</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const stars = [];
+  const COUNT = 300;
+  const cx = W / 2;
+  const cy = H / 2;
+
+  for (let i = 0; i < COUNT; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const radius = 50 + Math.random() * Math.max(W, H) * 0.6;
+    stars.push({
+      angle,
+      radius,
+      speed: 0.1 + Math.random() * 0.3,
+      size: 0.3 + Math.random() * 2,
+      brightness: 0.3 + Math.random() * 0.7,
+      hue: 200 + Math.random() * 60,
+      orbitOffset: Math.random() * Math.PI * 2,
+      orbitRadius: 2 + Math.random() * 8,
+    });
+  }
+
+  const bursts = [];
+  let time = 0;
+
+  document.addEventListener('click', (e) => {
+    bursts.push({
+      x: e.clientX,
+      y: e.clientY,
+      life: 1,
+      particles: Array.from({ length: 30 }, () => ({
+        vx: (Math.random() - 0.5) * 8,
+        vy: (Math.random() - 0.5) * 8,
+        size: 1 + Math.random() * 2,
+        hue: 40 + Math.random() * 30,
+      })),
+    });
+  });
+
+  function animate() {
+    time += 0.003;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
+    ctx.fillRect(0, 0, W, H);
+
+    for (const star of stars) {
+      star.angle += star.speed * 0.005;
+      const orbitX = Math.cos(time * star.speed + star.orbitOffset) * star.orbitRadius;
+      const orbitY = Math.sin(time * star.speed * 0.7 + star.orbitOffset) * star.orbitRadius;
+
+      const x = cx + Math.cos(star.angle) * star.radius + orbitX;
+      const y = cy + Math.sin(star.angle) * star.radius * 0.7 + orbitY;
+
+      const twinkle = 0.6 + Math.sin(time * 3 + star.angle * 2) * 0.4;
+      const alpha = star.brightness * twinkle;
+
+      ctx.beginPath();
+      ctx.arc(x, y, star.size, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${star.hue + Math.sin(time + star.angle) * 15}, 60%, 70%, ${alpha})`;
+      ctx.fill();
+
+      if (star.size > 1.5) {
+        ctx.beginPath();
+        ctx.arc(x, y, star.size * 2, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${star.hue + Math.sin(time + star.angle) * 15}, 60%, 70%, ${alpha * 0.1})`;
+        ctx.fill();
+      }
+    }
+
+    for (let i = bursts.length - 1; i >= 0; i--) {
+      const burst = bursts[i];
+      burst.life -= 0.015;
+
+      for (const p of burst.particles) {
+        p.vx *= 0.97;
+        p.vy *= 0.97;
+        p.vy += 0.05;
+        const x = burst.x + p.vx;
+        const y = burst.y + p.vy;
+        ctx.beginPath();
+        ctx.arc(x, y, p.size * burst.life, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${p.hue}, 90%, 60%, ${burst.life * 0.8})`;
+        ctx.fill();
+      }
+
+      if (burst.life <= 0) bursts.splice(i, 1);
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

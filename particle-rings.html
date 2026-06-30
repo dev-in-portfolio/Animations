@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Particle Rings</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #050510; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.1); font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Particle Rings · orbiting bands</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const rings = [];
+  const RING_COUNT = 7;
+  const cx = W / 2;
+  const cy = H / 2;
+
+  for (let r = 0; r < RING_COUNT; r++) {
+    const count = 80 + r * 30;
+    const radius = 60 + r * 35;
+    const tilt = (r / RING_COUNT) * 0.3;
+    const particles = [];
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2;
+      particles.push({
+        angle,
+        speed: 0.003 + (r / RING_COUNT) * 0.008 + Math.random() * 0.002,
+        wobble: Math.random() * Math.PI * 2,
+        wobbleAmp: 1 + Math.random() * 3,
+        hue: 200 + r * 20 + Math.random() * 20,
+        size: 1.5 + Math.random() * 2,
+      });
+    }
+    rings.push({ radius, tilt, particles, count });
+  }
+
+  let time = 0;
+
+  function animate() {
+    time += 0.008;
+    ctx.fillStyle = 'rgba(5, 5, 16, 0.06)';
+    ctx.fillRect(0, 0, W, H);
+
+    for (const ring of rings) {
+      for (const p of ring.particles) {
+        p.angle += p.speed;
+
+        const wobbleOffset = Math.sin(time * 1.5 + p.wobble) * p.wobbleAmp;
+        const effectiveRadius = ring.radius + wobbleOffset;
+
+        const yScale = Math.cos(ring.tilt);
+        const x = cx + Math.cos(p.angle) * effectiveRadius;
+        const y = cy + Math.sin(p.angle) * effectiveRadius * yScale;
+
+        const depth = Math.sin(p.angle + time * 0.5) * 0.5 + 0.5;
+        const alpha = 0.2 + depth * 0.5;
+        const size = p.size * (0.5 + depth * 0.5);
+
+        ctx.beginPath();
+        ctx.arc(x, y, size, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${p.hue + Math.sin(time + p.wobble) * 10}, 80%, ${50 + depth * 30}%, ${alpha})`;
+        ctx.fill();
+      }
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

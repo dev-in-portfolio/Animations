@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Particle Mandala</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #080810; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.1); font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Mandala · symmetric geometry</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const cx = W / 2;
+  const cy = H / 2;
+  const LAYERS = 8;
+  const SEGMENTS = 12;
+  const particles = [];
+
+  for (let l = 0; l < LAYERS; l++) {
+    const baseRadius = 30 + l * 25;
+    const hue = 200 + l * 15;
+    const count = SEGMENTS * (l + 1);
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2;
+      const wobble = Math.sin(l * 2 + i * 0.5) * 5;
+      particles.push({
+        angle,
+        radius: baseRadius + wobble,
+        baseRadius,
+        l,
+        hue: hue + Math.sin(i * 0.3) * 20,
+        size: 1.5 + (l / LAYERS) * 3,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.2 + Math.random() * 0.3,
+        orbitSpeed: 0.001 + (l / LAYERS) * 0.005,
+      });
+    }
+  }
+
+  let time = 0;
+
+  function animate() {
+    time += 0.004;
+    ctx.fillStyle = 'rgba(8, 8, 16, 0.03)';
+    ctx.fillRect(0, 0, W, H);
+
+    for (const p of particles) {
+      const pulse = 0.7 + Math.sin(time * p.speed + p.phase) * 0.3;
+      const r = p.radius * pulse;
+      const a = p.angle + time * p.orbitSpeed;
+
+      const x = cx + Math.cos(a) * r;
+      const y = cy + Math.sin(a) * r;
+
+      const alpha = 0.15 + pulse * 0.4;
+      const hue = p.hue + Math.sin(time + p.phase) * 15;
+
+      ctx.beginPath();
+      ctx.arc(x, y, p.size * pulse, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${hue}, 75%, ${45 + pulse * 25}%, ${alpha})`;
+      ctx.fill();
+
+      if (p.l > 0 && Math.floor(time * 10) % 2 === 0) {
+        const nextAngle = p.angle + (Math.PI * 2 / (SEGMENTS * (p.l + 1)));
+        const nextR = p.radius * pulse;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(
+          cx + Math.cos(nextAngle + time * p.orbitSpeed) * nextR,
+          cy + Math.sin(nextAngle + time * p.orbitSpeed) * nextR
+        );
+        ctx.strokeStyle = `hsla(${hue}, 60%, 50%, 0.04)`;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

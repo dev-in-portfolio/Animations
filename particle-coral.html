@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Particle Coral</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #060e12; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.08); font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Coral · growing reef</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const polyps = [];
+
+  function createPolyp(x, y) {
+    const branches = 3 + Math.floor(Math.random() * 4);
+    const hue = 20 + Math.random() * 30;
+    const segments = [];
+    for (let b = 0; b < branches; b++) {
+      const angle = (b / branches) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+      const len = 15 + Math.random() * 30;
+      const segs = [];
+      let cx = x, cy = y;
+      for (let s = 0; s < 6; s++) {
+        const frac = s / 6;
+        cx += Math.cos(angle + Math.sin(frac * 3) * 0.3) * (len / 6);
+        cy += Math.sin(angle + Math.cos(frac * 3) * 0.3) * (len / 6) * 0.5;
+        segs.push({ x: cx, y: cy });
+      }
+      segments.push(segs);
+    }
+    polyps.push({ x, y, segments, hue, size: 2 + Math.random() * 2, phase: Math.random() * Math.PI * 2 });
+  }
+
+  for (let i = 0; i < 15; i++) {
+    createPolyp(Math.random() * W, H - 30 - Math.random() * 60);
+  }
+
+  let time = 0;
+
+  function animate() {
+    time += 0.003;
+    ctx.fillStyle = 'rgba(6, 14, 18, 0.02)';
+    ctx.fillRect(0, 0, W, H);
+
+    for (const p of polyps) {
+      for (const segs of p.segments) {
+        for (let s = 0; s < segs.length - 1; s++) {
+          const sway = Math.sin(time * 0.5 + p.phase + s * 0.3) * (s / segs.length) * 4;
+          const a = segs[s];
+          const b = segs[s + 1];
+          const alpha = 0.15 + (s / segs.length) * 0.2;
+
+          ctx.beginPath();
+          ctx.moveTo(a.x + sway, a.y);
+          ctx.lineTo(b.x + sway * 1.2, b.y - 1);
+          ctx.strokeStyle = `hsla(${p.hue + s * 3}, 70%, ${35 + (s / segs.length) * 30}%, ${alpha})`;
+          ctx.lineWidth = p.size * (1 - s / segs.length * 0.5);
+          ctx.stroke();
+        }
+
+        const tip = segs[segs.length - 1];
+        const sway = Math.sin(time * 0.5 + p.phase + segs.length * 0.3) * 4;
+        ctx.beginPath();
+        ctx.arc(tip.x + sway, tip.y - 1, p.size * 0.6, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${p.hue + 10}, 80%, 70%, 0.3)`;
+        ctx.fill();
+      }
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

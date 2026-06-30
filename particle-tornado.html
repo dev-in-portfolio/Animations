@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Particle Tornado</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #08080a; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.06); font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Tornado · funnel vortex</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const cx = W / 2;
+  const particles = [];
+  const COUNT = 400;
+
+  for (let i = 0; i < COUNT; i++) {
+    const t = Math.random();
+    const height = t * H;
+    const radius = 5 + t * 80 + Math.random() * 20;
+    const angle = Math.random() * Math.PI * 2;
+    particles.push({
+      x: cx + Math.cos(angle) * radius,
+      y: height,
+      baseRadius: radius,
+      baseAngle: angle,
+      height,
+      speed: 0.01 + 0.03 * (1 - t),
+      riseSpeed: 0.3 + t * 0.5,
+      size: 2 + (1 - t) * 4,
+      hue: 40 + Math.random() * 20,
+      alpha: 0.2 + (1 - t) * 0.4,
+      phase: Math.random() * Math.PI * 2,
+      drift: (Math.random() - 0.5) * 0.2,
+    });
+  }
+
+  let time = 0;
+
+  function animate() {
+    time += 0.004;
+    ctx.fillStyle = 'rgba(8, 8, 10, 0.02)';
+    ctx.fillRect(0, 0, W, H);
+
+    for (const p of particles) {
+      p.baseAngle += p.speed;
+      p.y -= p.riseSpeed;
+      if (p.y < -50) p.y = H + 10;
+
+      const wobble = Math.sin(time + p.phase + p.height * 0.01) * 5;
+      const r = p.baseRadius + wobble + Math.sin(time * 0.5 + p.phase) * 3;
+      const x = cx + Math.cos(p.baseAngle + time * 0.02) * r + p.drift;
+      const y = p.y;
+
+      const stretch = 1 + Math.sin(time + p.phase) * 0.2;
+      ctx.beginPath();
+      ctx.ellipse(x, y, p.size, p.size * stretch, p.baseAngle, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${p.hue + Math.sin(time + p.phase) * 10}, 80%, ${40 + (1 - p.y / H) * 20}%, ${p.alpha})`;
+      ctx.fill();
+    }
+
+    ctx.beginPath();
+    const funnelPts = [];
+    for (let i = 0; i < 20; i++) {
+      const t = i / 19;
+      const r = 5 + t * 60;
+      const a = t * Math.PI * 4 + time * 0.5;
+      funnelPts.push({ x: cx + Math.cos(a) * r, y: t * H });
+    }
+    ctx.beginPath();
+    ctx.moveTo(funnelPts[0].x, funnelPts[0].y);
+    for (let i = 1; i < funnelPts.length; i++) {
+      ctx.lineTo(funnelPts[i].x, funnelPts[i].y);
+    }
+    ctx.strokeStyle = 'hsla(40, 50%, 40%, 0.03)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

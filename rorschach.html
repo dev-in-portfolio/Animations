@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rorschach</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #05050a; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.1); font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Rorschach · symmetrical inkblot</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const cx = W / 2;
+  const cy = H / 2;
+  let time = 0;
+  const mouse = { x: cx, y: cy };
+
+  document.addEventListener('mousemove', (e) => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+  });
+
+  function drawBlob(centerX, centerY, size, complexity, hue, alpha, mirror) {
+    for (let m = 0; m < (mirror ? 2 : 1); m++) {
+      ctx.beginPath();
+      const steps = 40;
+      for (let i = 0; i <= steps; i++) {
+        const t = (i / steps) * Math.PI;
+        const wave = Math.sin(t * complexity + time * 0.5) * size * 0.3
+                   + Math.cos(t * (complexity * 0.7) + time * 0.3) * size * 0.2
+                   + Math.sin(t * 2 + time * 0.7 + mouse.x * 0.01) * size * 0.1;
+        const r = Math.abs(size + wave);
+        const x = centerX + (m === 0 ? -1 : 1) * Math.cos(t) * r;
+        const y = centerY + Math.sin(t) * r * 0.8;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.fillStyle = `hsla(${hue + Math.sin(time + m) * 20}, 80%, 50%, ${alpha})`;
+      ctx.fill();
+    }
+  }
+
+  function animate() {
+    time += 0.003;
+    ctx.fillStyle = 'rgba(5, 5, 10, 0.02)';
+    ctx.fillRect(0, 0, W, H);
+
+    const centerX = cx + (mouse.x - cx) * 0.02;
+    const centerY = cy + (mouse.y - cy) * 0.02;
+
+    drawBlob(centerX, centerY, 60 + Math.sin(time * 0.5) * 10, 4, 240, 0.08, true);
+    drawBlob(centerX - 40, centerY + 20, 40 + Math.cos(time * 0.4) * 8, 3, 280, 0.06, true);
+    drawBlob(centerX + 20, centerY - 30, 35 + Math.sin(time * 0.6 + 1) * 7, 5, 200, 0.05, true);
+    drawBlob(centerX + 50, centerY + 40, 25 + Math.cos(time * 0.3 + 2) * 5, 3, 320, 0.04, true);
+    drawBlob(centerX - 30, centerY + 40, 20 + Math.sin(time * 0.5 + 3) * 4, 4, 160, 0.04, true);
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>

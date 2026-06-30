@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grid Reveal</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0f0f0f;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 4px;
+    width: 500px;
+    height: 500px;
+    position: relative;
+  }
+  .cell {
+    background: transparent;
+    border-radius: 2px;
+    opacity: 0;
+    transform: scale(0);
+    transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+    overflow: hidden;
+  }
+  .cell.reveal {
+    opacity: 1;
+    transform: scale(1);
+  }
+  .cell:nth-child(1) { background: #ff6b6b; }
+  .cell:nth-child(2) { background: #ff8e53; }
+  .cell:nth-child(3) { background: #ffd93d; }
+  .cell:nth-child(4) { background: #6bcbff; }
+  .cell:nth-child(5) { background: #6e44ff; }
+  .cell:nth-child(6) { background: #ff6bb5; }
+  .cell:nth-child(7) { background: #44ffa1; }
+  .cell:nth-child(8) { background: #ff4466; }
+  .cell:nth-child(9) { background: #8866ff; }
+  .cell:nth-child(10) { background: #66ffcc; }
+  .cell:nth-child(11) { background: #ff8844; }
+  .cell:nth-child(12) { background: #4466ff; }
+  .cell:nth-child(13) { background: #ff44aa; }
+  .cell:nth-child(14) { background: #44ffcc; }
+  .cell:nth-child(15) { background: #aa44ff; }
+  .cell:nth-child(16) { background: #ffaa44; }
+  .cell:nth-child(17) { background: #44aaff; }
+  .cell:nth-child(18) { background: #ff6644; }
+  .cell:nth-child(19) { background: #44ff88; }
+  .cell:nth-child(20) { background: #8844ff; }
+
+  .center-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #fff;
+    font-size: 2.5rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    z-index: 2;
+    opacity: 0;
+    animation: fadeIn 0.8s ease 1.5s forwards;
+    text-shadow: 0 0 40px rgba(0,0,0,0.5);
+    text-align: center;
+  }
+  .center-text span {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 300;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    opacity: 0.5;
+    margin-top: 0.5rem;
+  }
+  @keyframes fadeIn {
+    to { opacity: 1; }
+  }
+  .label {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255,255,255,0.15);
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+  <div class="grid" id="grid">
+    <div class="center-text">HELLO<span>click to replay</span></div>
+  </div>
+  <div class="label">Grid Reveal · staggered tiles</div>
+  <script>
+    const grid = document.getElementById('grid');
+    const total = 100;
+
+    for (let i = 0; i < total; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      grid.appendChild(cell);
+    }
+
+    function animate() {
+      const cells = document.querySelectorAll('.cell');
+      cells.forEach(c => c.classList.remove('reveal'));
+      cells.forEach((cell, i) => {
+        const row = Math.floor(i / 10);
+        const col = i % 10;
+        const delay = (row + col) * 30 + Math.random() * 100;
+        setTimeout(() => cell.classList.add('reveal'), delay);
+      });
+    }
+
+    animate();
+    grid.addEventListener('click', animate);
+  </script>
+</body>
+</html>

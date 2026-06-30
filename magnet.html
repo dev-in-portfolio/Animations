@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Magnet</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #05050a; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,150,100,0.12); font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="label">Magnet · iron filings</div>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const filings = [];
+  const COUNT = 300;
+
+  for (let i = 0; i < COUNT; i++) {
+    filings.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vx: 0, vy: 0,
+      size: 1 + Math.random() * 2,
+      hue: 20 + Math.random() * 20,
+    });
+  }
+
+  const mouse = { x: W / 2, y: H / 2, down: false };
+  let magnet1 = { x: W * 0.3, y: H / 2, polarity: 1 };
+  let magnet2 = { x: W * 0.7, y: H / 2, polarity: -1 };
+
+  document.addEventListener('mousemove', (e) => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+  });
+  document.addEventListener('mousedown', () => mouse.down = true);
+  document.addEventListener('mouseup', () => mouse.down = false);
+
+  let time = 0;
+
+  function animate() {
+    time += 0.005;
+    ctx.fillStyle = 'rgba(5, 5, 10, 0.03)';
+    ctx.fillRect(0, 0, W, H);
+
+    if (mouse.down) {
+      magnet1.x += (mouse.x - 40 - magnet1.x) * 0.05;
+      magnet1.y += (mouse.y - magnet1.y) * 0.05;
+      magnet2.x += (mouse.x + 40 - magnet2.x) * 0.05;
+      magnet2.y += (mouse.y - magnet2.y) * 0.05;
+    } else {
+      magnet1.x += (W * 0.3 - magnet1.x) * 0.01;
+      magnet1.y += (H / 2 - magnet1.y) * 0.01;
+      magnet2.x += (W * 0.7 - magnet2.x) * 0.01;
+      magnet2.y += (H / 2 - magnet2.y) * 0.01;
+    }
+
+    ctx.beginPath();
+    ctx.arc(magnet1.x, magnet1.y, 6, 0, Math.PI * 2);
+    ctx.fillStyle = 'hsla(0, 90%, 60%, 0.5)';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(magnet2.x, magnet2.y, 6, 0, Math.PI * 2);
+    ctx.fillStyle = 'hsla(220, 90%, 60%, 0.5)';
+    ctx.fill();
+
+    for (const f of filings) {
+      const dx1 = f.x - magnet1.x;
+      const dy1 = f.y - magnet1.y;
+      const d1 = Math.sqrt(dx1 * dx1 + dy1 * dy1);
+      const dx2 = f.x - magnet2.x;
+      const dy2 = f.y - magnet2.y;
+      const d2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+
+      const force1 = magnet1.polarity / (d1 + 5);
+      const force2 = magnet2.polarity / (d2 + 5);
+
+      f.vx += (dx1 / d1) * force1 * 0.5 + (dx2 / d2) * force2 * 0.5;
+      f.vy += (dy1 / d1) * force1 * 0.5 + (dy2 / d2) * force2 * 0.5;
+      f.vx *= 0.95;
+      f.vy *= 0.95;
+
+      f.x += f.vx;
+      f.y += f.vy;
+
+      if (f.x < -10) f.x = W + 10;
+      if (f.x > W + 10) f.x = -10;
+      if (f.y < -10) f.y = H + 10;
+      if (f.y > H + 10) f.y = -10;
+
+      const angle = Math.atan2(f.vy, f.vx);
+      ctx.save();
+      ctx.translate(f.x, f.y);
+      ctx.rotate(angle);
+      ctx.fillStyle = `hsla(${f.hue}, 60%, 50%, 0.5)`;
+      ctx.fillRect(-f.size / 2, -f.size * 0.1, f.size, f.size * 0.2);
+      ctx.restore();
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>
