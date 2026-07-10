@@ -7,8 +7,8 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: #050510; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
-  canvas { display: block; }
-  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.1); font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+  canvas { display: block; width: 100vw; height: 100vh; touch-action: none; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.16); font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
 </style>
 </head>
 <body>
@@ -17,14 +17,31 @@
 <script>
   const canvas = document.getElementById('c');
   const ctx = canvas.getContext('2d');
-  let W, H;
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const EPSILON = 0.0001;
+  let W = 0;
+  let H = 0;
+  let dpr = 1;
+  let resizeTimer;
+  let rafId = 0;
+  let lastTime = performance.now();
 
   function resize() {
-    W = canvas.width = window.innerWidth;
-    H = canvas.height = window.innerHeight;
+    W = window.innerWidth;
+    H = window.innerHeight;
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    canvas.style.width = `${W}px`;
+    canvas.style.height = `${H}px`;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
+
   resize();
-  window.addEventListener('resize', resize);
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(resize, 100);
+  });
 
   const boids = [];
   const COUNT = 80;
@@ -40,14 +57,20 @@
     });
   }
 
-  const mouse = { x: W / 2, y: H / 2 };
+  const pointer = { x: W / 2, y: H / 2, active: false };
 
-  document.addEventListener('mousemove', (e) => {
-    mouse.x = e.clientX;
-    mouse.y = e.clientY;
+  canvas.addEventListener('pointermove', (event) => {
+    pointer.x = event.clientX;
+    pointer.y = event.clientY;
+    pointer.active = true;
   });
+  canvas.addEventListener('pointerleave', () => { pointer.active = false; });
+  canvas.addEventListener('pointercancel', () => { pointer.active = false; });
 
-  function animate() {
+  function renderFrame(now) {
+    const frameScale = Math.min(Math.max((now - lastTime) / 16.6667, 0.25), 2);
+    lastTime = now;
+
     ctx.fillStyle = 'rgba(5, 5, 16, 0.04)';
     ctx.fillRect(0, 0, W, H);
 
@@ -61,9 +84,9 @@
         if (other === b) continue;
         const dx = b.x - other.x;
         const dy = b.y - other.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
+        const distSq = dx * dx + dy * dy;
 
-        if (dist < 80) {
+        if (distSq < 80 * 80) {
           alignX += other.vx;
           alignY += other.vy;
           cohX += other.x;
@@ -71,9 +94,10 @@
           neighbors++;
         }
 
-        if (dist < 25) {
-          sepX += dx / dist;
-          sepY += dy / dist;
+        if (distSq > EPSILON && distSq < 25 * 25) {
+          const distance = Math.sqrt(distSq);
+          sepX += dx / distance;
+          sepY += dy / distance;
         }
       }
 
@@ -84,24 +108,33 @@
         cohY = (cohY / neighbors - b.y) * 0.003;
       }
 
-      const mdx = mouse.x - b.x;
-      const mdy = mouse.y - b.y;
-      const mdist = Math.sqrt(mdx * mdx + mdy * mdy);
-      let mouseForceX = 0, mouseForceY = 0;
-      if (mdist < 150) {
-        mouseForceX = -(mdx / mdist) * 0.3;
-        mouseForceY = -(mdy / mdist) * 0.3;
+      let pointerForceX = 0;
+      let pointerForceY = 0;
+      if (pointer.active) {
+        const dx = pointer.x - b.x;
+        const dy = pointer.y - b.y;
+        const distSq = dx * dx + dy * dy;
+        if (distSq > EPSILON && distSq < 150 * 150) {
+          const distance = Math.sqrt(distSq);
+          pointerForceX = -(dx / distance) * 0.3;
+          pointerForceY = -(dy / distance) * 0.3;
+        }
       }
 
-      b.vx += alignX + cohX + sepX * 0.05 + mouseForceX;
-      b.vy += alignY + cohY + sepY * 0.05 + mouseForceY;
+      b.vx += (alignX + cohX + sepX * 0.05 + pointerForceX) * frameScale;
+      b.vy += (alignY + cohY + sepY * 0.05 + pointerForceY) * frameScale;
 
-      const speed = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
-      if (speed > 3) { b.vx *= 3 / speed; b.vy *= 3 / speed; }
-      if (speed < 0.5) { b.vx *= 1.02; b.vy *= 1.02; }
+      const speed = Math.hypot(b.vx, b.vy);
+      if (speed > 3) {
+        b.vx *= 3 / speed;
+        b.vy *= 3 / speed;
+      } else if (speed < 0.5) {
+        b.vx *= 1.02;
+        b.vy *= 1.02;
+      }
 
-      b.x += b.vx;
-      b.y += b.vy;
+      b.x += b.vx * frameScale;
+      b.y += b.vy * frameScale;
 
       if (b.x < -20) b.x = W + 20;
       if (b.x > W + 20) b.x = -20;
@@ -112,21 +145,36 @@
       ctx.save();
       ctx.translate(b.x, b.y);
       ctx.rotate(angle);
-
       ctx.beginPath();
       ctx.moveTo(b.size * 2, 0);
       ctx.lineTo(-b.size, -b.size * 0.6);
       ctx.lineTo(-b.size, b.size * 0.6);
       ctx.closePath();
-
       ctx.fillStyle = `hsla(${b.hue}, 70%, 60%, 0.7)`;
       ctx.fill();
       ctx.restore();
     }
-
-    requestAnimationFrame(animate);
   }
-  animate();
+
+  function animate(now) {
+    renderFrame(now);
+    if (!reducedMotion.matches && !document.hidden) {
+      rafId = requestAnimationFrame(animate);
+    }
+  }
+
+  function restartAnimation() {
+    cancelAnimationFrame(rafId);
+    lastTime = performance.now();
+    rafId = requestAnimationFrame(animate);
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) restartAnimation();
+    else cancelAnimationFrame(rafId);
+  });
+  reducedMotion.addEventListener('change', restartAnimation);
+  restartAnimation();
 </script>
 </body>
 </html>
