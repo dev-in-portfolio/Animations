@@ -126,20 +126,27 @@
       const target = targets[i];
       if (!target) continue;
 
-      const dx = target.x - particle.x;
-      const dy = target.y - particle.y;
-      const distance = Math.hypot(dx, dy);
+      if (reducedMotion.matches) {
+        particle.x = target.x;
+        particle.y = target.y;
+        particle.vx = 0;
+        particle.vy = 0;
+      } else {
+        const dx = target.x - particle.x;
+        const dy = target.y - particle.y;
+        const distance = Math.hypot(dx, dy);
 
-      if (distance > 1) {
-        particle.vx += dx * 0.02 * frameScale;
-        particle.vy += dy * 0.02 * frameScale;
-        particle.vx *= Math.pow(0.92, frameScale);
-        particle.vy *= Math.pow(0.92, frameScale);
-        particle.x += particle.vx * frameScale;
-        particle.y += particle.vy * frameScale;
-      } else if (!reducedMotion.matches) {
-        particle.x += (Math.random() - 0.5) * 0.3;
-        particle.y += (Math.random() - 0.5) * 0.3;
+        if (distance > 1) {
+          particle.vx += dx * 0.02 * frameScale;
+          particle.vy += dy * 0.02 * frameScale;
+          particle.vx *= Math.pow(0.92, frameScale);
+          particle.vy *= Math.pow(0.92, frameScale);
+          particle.x += particle.vx * frameScale;
+          particle.y += particle.vy * frameScale;
+        } else {
+          particle.x += (Math.random() - 0.5) * 0.3;
+          particle.y += (Math.random() - 0.5) * 0.3;
+        }
       }
 
       const alpha = target.escaped ? 0.3 + (target.iteration / target.maxIter) * 0.5 : 0.08;
