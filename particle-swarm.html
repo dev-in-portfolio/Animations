@@ -40,7 +40,10 @@
   resize();
   window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(resize, 100);
+    resizeTimer = setTimeout(() => {
+      resize();
+      restartAnimation();
+    }, 100);
   });
 
   const BOIDS = 80;
@@ -71,8 +74,9 @@
     const frameScale = Math.min(Math.max((now - lastTime) / 16.6667, 0.25), 2);
     lastTime = now;
     const time = now * 0.00018;
+    const fadeAlpha = 1 - Math.pow(1 - 0.06, frameScale);
 
-    ctx.fillStyle = 'rgba(10, 10, 18, 0.06)';
+    ctx.fillStyle = `rgba(10, 10, 18, ${fadeAlpha})`;
     ctx.fillRect(0, 0, W, H);
 
     for (const b of boids) {
