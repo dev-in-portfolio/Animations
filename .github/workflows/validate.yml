@@ -13,5 +13,5 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-      - name: Validate HTML and gallery links
-        run: node scripts/validate.js
+      - name: Run regression tests
+        run: npm test
