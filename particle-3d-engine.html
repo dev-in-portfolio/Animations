@@ -7,62 +7,81 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: #07060a; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
-  canvas { display: block; }
-  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.06); font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+  canvas { display: block; width: 100vw; height: 100vh; touch-action: none; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.16); font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div class="label">3D Engine · move mouse to orbit</div>
+<div class="label">3D Engine · drag or move to orbit</div>
 <script>
   const canvas = document.getElementById('c');
   const ctx = canvas.getContext('2d');
-  let W, H;
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  let W = 0;
+  let H = 0;
+  let dpr = 1;
+  let resizeTimer;
+  let rafId = 0;
+  let lastTime = performance.now();
+  let rotX = 0.4;
+  let rotY = 0.6;
+  let targetRX = 0.4;
+  let targetRY = 0.6;
+
   function resize() {
-    W = canvas.width = window.innerWidth;
-    H = canvas.height = window.innerHeight;
+    W = window.innerWidth;
+    H = window.innerHeight;
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    canvas.style.width = `${W}px`;
+    canvas.style.height = `${H}px`;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
+
   resize();
-  window.addEventListener('resize', resize);
-
-  let rotX = 0.4, rotY = 0.6;
-  let targetRX = 0.4, targetRY = 0.6;
-
-  canvas.addEventListener('mousemove', e => {
-    targetRY = (e.clientX / W - 0.5) * Math.PI * 2;
-    targetRX = (e.clientY / H - 0.5) * Math.PI;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      resize();
+      restartAnimation();
+    }, 100);
   });
 
-  function project(x, y, z) {
-    const cz = Math.cos(rotX), sz = Math.sin(rotX);
-    const cy = Math.cos(rotY), sy = Math.sin(rotY);
-    let x1 = x;
-    let y1 = y * cz - z * sz;
-    let z1 = y * sz + z * cz;
-    let x2 = x1 * cy + z1 * sy;
-    let y2 = y1;
-    let z2 = -x1 * sy + z1 * cy;
-    const fov = 600;
-    const scale = fov / (fov + z2);
-    return { sx: W / 2 + x2 * scale, sy: H / 2 + y2 * scale, scale, z: z2 };
+  function handlePointer(event) {
+    targetRY = (event.clientX / Math.max(W, 1) - 0.5) * Math.PI * 2;
+    targetRX = (event.clientY / Math.max(H, 1) - 0.5) * Math.PI;
+    if (reducedMotion.matches) restartAnimation();
   }
 
+  canvas.addEventListener('pointermove', handlePointer);
+  canvas.addEventListener('pointerdown', handlePointer);
+
   const particles = [];
+  const visible = [];
+
+  function addParticle(x, y, z, hue, size) {
+    particles.push({ x, y, z, hue, size, sx: 0, sy: 0, scale: 0, depth: 0 });
+  }
 
   function addCube(size, hue, cx, cy, cz, count) {
-    const h = size / 2;
+    const half = size / 2;
     for (let i = 0; i < count; i++) {
       const face = Math.floor(Math.random() * 6);
-      let x, y, z;
+      let x;
+      let y;
+      let z;
       switch (face) {
-        case 0: x = -h; y = (Math.random() - 0.5) * size; z = (Math.random() - 0.5) * size; break;
-        case 1: x = h; y = (Math.random() - 0.5) * size; z = (Math.random() - 0.5) * size; break;
-        case 2: y = -h; x = (Math.random() - 0.5) * size; z = (Math.random() - 0.5) * size; break;
-        case 3: y = h; x = (Math.random() - 0.5) * size; z = (Math.random() - 0.5) * size; break;
-        case 4: z = -h; x = (Math.random() - 0.5) * size; y = (Math.random() - 0.5) * size; break;
-        case 5: z = h; x = (Math.random() - 0.5) * size; y = (Math.random() - 0.5) * size; break;
+        case 0: x = -half; y = (Math.random() - 0.5) * size; z = (Math.random() - 0.5) * size; break;
+        case 1: x = half; y = (Math.random() - 0.5) * size; z = (Math.random() - 0.5) * size; break;
+        case 2: y = -half; x = (Math.random() - 0.5) * size; z = (Math.random() - 0.5) * size; break;
+        case 3: y = half; x = (Math.random() - 0.5) * size; z = (Math.random() - 0.5) * size; break;
+        case 4: z = -half; x = (Math.random() - 0.5) * size; y = (Math.random() - 0.5) * size; break;
+        default: z = half; x = (Math.random() - 0.5) * size; y = (Math.random() - 0.5) * size;
       }
-      particles.push({ x: cx + x, y: cy + y, z: cz + z, hue: hue + Math.random() * 25, size: 2 + Math.random() * 3 });
+      addParticle(cx + x, cy + y, cz + z, hue + Math.random() * 25, 2 + Math.random() * 3);
     }
   }
 
@@ -70,14 +89,13 @@
     for (let i = 0; i < count; i++) {
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(2 * Math.random() - 1);
-      const r = radius;
-      particles.push({
-        x: cx + r * Math.sin(phi) * Math.cos(theta),
-        y: cy + r * Math.sin(phi) * Math.sin(theta),
-        z: cz + r * Math.cos(phi),
-        hue: hue + Math.random() * 30,
-        size: 1.5 + Math.random() * 3,
-      });
+      addParticle(
+        cx + radius * Math.sin(phi) * Math.cos(theta),
+        cy + radius * Math.sin(phi) * Math.sin(theta),
+        cz + radius * Math.cos(phi),
+        hue + Math.random() * 30,
+        1.5 + Math.random() * 3
+      );
     }
   }
 
@@ -85,13 +103,13 @@
     for (let i = 0; i < count; i++) {
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.random() * Math.PI * 2;
-      particles.push({
-        x: cx + (radius + tube * Math.cos(phi)) * Math.cos(theta),
-        y: cy + tube * Math.sin(phi),
-        z: cz + (radius + tube * Math.cos(phi)) * Math.sin(theta),
-        hue: hue + theta * 25 + Math.random() * 20,
-        size: 1.5 + Math.random() * 2.5,
-      });
+      addParticle(
+        cx + (radius + tube * Math.cos(phi)) * Math.cos(theta),
+        cy + tube * Math.sin(phi),
+        cz + (radius + tube * Math.cos(phi)) * Math.sin(theta),
+        hue + theta * 25 + Math.random() * 20,
+        1.5 + Math.random() * 2.5
+      );
     }
   }
 
@@ -101,44 +119,90 @@
 
   for (let i = 0; i < 200; i++) {
     const angle = Math.random() * Math.PI * 2;
-    const r = 60 + Math.random() * 40;
-    particles.push({
-      x: Math.cos(angle) * r,
-      y: -120 + Math.random() * 20,
-      z: Math.sin(angle) * r,
-      hue: 260 + Math.random() * 30,
-      size: 1.5 + Math.random() * 2,
-    });
+    const radius = 60 + Math.random() * 40;
+    addParticle(
+      Math.cos(angle) * radius,
+      -120 + Math.random() * 20,
+      Math.sin(angle) * radius,
+      260 + Math.random() * 30,
+      1.5 + Math.random() * 2
+    );
   }
 
-  function animate() {
-    rotX += (targetRX - rotX) * 0.06;
-    rotY += (targetRY - rotY) * 0.06;
+  function projectParticle(particle) {
+    const cosX = Math.cos(rotX);
+    const sinX = Math.sin(rotX);
+    const cosY = Math.cos(rotY);
+    const sinY = Math.sin(rotY);
 
-    ctx.fillStyle = 'rgba(7, 6, 10, 0.1)';
-    ctx.fillRect(0, 0, W, H);
+    const rotatedY = particle.y * cosX - particle.z * sinX;
+    const rotatedZ = particle.y * sinX + particle.z * cosX;
+    const rotatedX2 = particle.x * cosY + rotatedZ * sinY;
+    const rotatedZ2 = -particle.x * sinY + rotatedZ * cosY;
+    const fov = 600;
+    const denominator = fov + rotatedZ2;
 
-    const projected = particles
-      .map(p => {
-        const { sx, sy, scale, z } = project(p.x, p.y, p.z);
-        return { ...p, sx, sy, scale, z };
-      })
-      .filter(p => p.scale > 0.05)
-      .sort((a, b) => b.z - a.z);
-
-    for (const p of projected) {
-      const sz = p.size * p.scale;
-      if (sz < 0.5) continue;
-      const alpha = Math.min(0.8, p.scale * 0.7);
-      ctx.beginPath();
-      ctx.arc(p.sx, p.sy, sz, 0, Math.PI * 2);
-      ctx.fillStyle = `hsla(${p.hue + p.scale * 20}, 80%, ${45 + p.scale * 25}%, ${alpha})`;
-      ctx.fill();
+    if (denominator <= 1) {
+      particle.scale = 0;
+      return false;
     }
 
-    requestAnimationFrame(animate);
+    const scale = fov / denominator;
+    particle.sx = W / 2 + rotatedX2 * scale;
+    particle.sy = H / 2 + rotatedY * scale;
+    particle.scale = scale;
+    particle.depth = rotatedZ2;
+    return scale > 0.05;
   }
-  animate();
+
+  function renderFrame(now) {
+    const frameScale = Math.min(Math.max((now - lastTime) / 16.6667, 0.25), 2);
+    lastTime = now;
+    const easing = reducedMotion.matches ? 1 : 1 - Math.pow(1 - 0.06, frameScale);
+    const fadeAlpha = 1 - Math.pow(1 - 0.1, frameScale);
+
+    rotX += (targetRX - rotX) * easing;
+    rotY += (targetRY - rotY) * easing;
+
+    ctx.fillStyle = `rgba(7, 6, 10, ${fadeAlpha})`;
+    ctx.fillRect(0, 0, W, H);
+
+    visible.length = 0;
+    for (const particle of particles) {
+      if (projectParticle(particle)) visible.push(particle);
+    }
+    visible.sort((a, b) => b.depth - a.depth);
+
+    for (const particle of visible) {
+      const size = particle.size * particle.scale;
+      if (size < 0.5) continue;
+      const alpha = Math.min(0.8, particle.scale * 0.7);
+      ctx.beginPath();
+      ctx.arc(particle.sx, particle.sy, size, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${particle.hue + particle.scale * 20}, 80%, ${45 + particle.scale * 25}%, ${alpha})`;
+      ctx.fill();
+    }
+  }
+
+  function animate(now) {
+    renderFrame(now);
+    if (!reducedMotion.matches && !document.hidden) {
+      rafId = requestAnimationFrame(animate);
+    }
+  }
+
+  function restartAnimation() {
+    cancelAnimationFrame(rafId);
+    lastTime = performance.now();
+    rafId = requestAnimationFrame(animate);
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) restartAnimation();
+    else cancelAnimationFrame(rafId);
+  });
+  reducedMotion.addEventListener('change', restartAnimation);
+  restartAnimation();
 </script>
 </body>
 </html>

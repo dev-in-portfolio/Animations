@@ -1,0 +1,13 @@
+{
+  "name": "animation-playground",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dependency-free browser animation playground",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node scripts/validate.js && node scripts/server-smoke-test.js && node scripts/runtime-smoke-test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -7,8 +7,8 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: #0a0a12; overflow: hidden; height: 100vh; font-family: system-ui, sans-serif; }
-  canvas { display: block; }
-  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.1); font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+  canvas { display: block; width: 100vw; height: 100vh; touch-action: none; }
+  .label { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.16); font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
 </style>
 </head>
 <body>
@@ -17,14 +17,34 @@
 <script>
   const canvas = document.getElementById('c');
   const ctx = canvas.getContext('2d');
-  let W, H;
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const EPSILON = 0.0001;
+  let W = 0;
+  let H = 0;
+  let dpr = 1;
+  let resizeTimer;
+  let rafId = 0;
+  let lastTime = performance.now();
 
   function resize() {
-    W = canvas.width = window.innerWidth;
-    H = canvas.height = window.innerHeight;
+    W = window.innerWidth;
+    H = window.innerHeight;
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    canvas.style.width = `${W}px`;
+    canvas.style.height = `${H}px`;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
+
   resize();
-  window.addEventListener('resize', resize);
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      resize();
+      restartAnimation();
+    }, 100);
+  });
 
   const BOIDS = 80;
   const boids = [];
@@ -41,19 +61,22 @@
     });
   }
 
-  const mouse = { x: W/2, y: H/2, active: false };
-  document.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.active = true; });
-  document.addEventListener('mouseleave', () => { mouse.active = false; });
+  const pointer = { x: W / 2, y: H / 2, active: false };
+  canvas.addEventListener('pointermove', (event) => {
+    pointer.x = event.clientX;
+    pointer.y = event.clientY;
+    pointer.active = true;
+  });
+  canvas.addEventListener('pointerleave', () => { pointer.active = false; });
+  canvas.addEventListener('pointercancel', () => { pointer.active = false; });
 
-  function dist(a, b) {
-    return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
-  }
+  function renderFrame(now) {
+    const frameScale = Math.min(Math.max((now - lastTime) / 16.6667, 0.25), 2);
+    lastTime = now;
+    const time = now * 0.00018;
+    const fadeAlpha = 1 - Math.pow(1 - 0.06, frameScale);
 
-  let time = 0;
-
-  function animate() {
-    time += 0.003;
-    ctx.fillStyle = 'rgba(10, 10, 18, 0.06)';
+    ctx.fillStyle = `rgba(10, 10, 18, ${fadeAlpha})`;
     ctx.fillRect(0, 0, W, H);
 
     for (const b of boids) {
@@ -62,25 +85,34 @@
       let cohesionX = 0, cohesionY = 0;
       let sepX = 0, sepY = 0;
       let neighbors = 0;
-      let mouseD = mouse.active ? dist(b, mouse) : Infinity;
 
-      if (mouseD < 100) {
-        const force = (1 - mouseD / 100) * 2;
-        ax += (b.x - mouse.x) / mouseD * force;
-        ay += (b.y - mouse.y) / mouseD * force;
+      if (pointer.active) {
+        const dx = b.x - pointer.x;
+        const dy = b.y - pointer.y;
+        const distSq = dx * dx + dy * dy;
+        if (distSq > EPSILON && distSq < 100 * 100) {
+          const distance = Math.sqrt(distSq);
+          const force = (1 - distance / 100) * 2;
+          ax += (dx / distance) * force;
+          ay += (dy / distance) * force;
+        }
       }
 
       for (const other of boids) {
         if (other === b) continue;
-        const d = dist(b, other);
-        if (d < 120) {
+        const dx = b.x - other.x;
+        const dy = b.y - other.y;
+        const distSq = dx * dx + dy * dy;
+
+        if (distSq < 120 * 120) {
           alignX += other.vx;
           alignY += other.vy;
           cohesionX += other.x;
           cohesionY += other.y;
-          if (d < 25) {
-            sepX += (b.x - other.x) / d;
-            sepY += (b.y - other.y) / d;
+          if (distSq > EPSILON && distSq < 25 * 25) {
+            const distance = Math.sqrt(distSq);
+            sepX += dx / distance;
+            sepY += dy / distance;
           }
           neighbors++;
         }
@@ -101,20 +133,25 @@
       if (b.y < 40) ay += 0.3;
       if (b.y > H - 40) ay -= 0.3;
 
-      b.vx += ax;
-      b.vy += ay;
-      const speed = Math.sqrt(b.vx ** 2 + b.vy ** 2);
-      if (speed > 3) { b.vx *= 3 / speed; b.vy *= 3 / speed; }
-      if (speed < 0.5) { b.vx += (Math.random() - 0.5) * 0.1; b.vy += (Math.random() - 0.5) * 0.1; }
+      b.vx += ax * frameScale;
+      b.vy += ay * frameScale;
+      const speed = Math.hypot(b.vx, b.vy);
+      if (speed > 3) {
+        b.vx *= 3 / speed;
+        b.vy *= 3 / speed;
+      } else if (speed < 0.5) {
+        b.vx += (Math.random() - 0.5) * 0.1;
+        b.vy += (Math.random() - 0.5) * 0.1;
+      }
 
-      b.x += b.vx;
-      b.y += b.vy;
+      b.x += b.vx * frameScale;
+      b.y += b.vy * frameScale;
 
       const hue = b.hue + Math.sin(time + b.phase) * 15;
-      const alpha = 0.5 + (speed / 3) * 0.3;
+      const alpha = 0.5 + (Math.min(speed, 3) / 3) * 0.3;
+      const angle = Math.atan2(b.vy, b.vx);
 
       ctx.beginPath();
-      const angle = Math.atan2(b.vy, b.vx);
       ctx.moveTo(b.x + Math.cos(angle) * 6, b.y + Math.sin(angle) * 6);
       ctx.lineTo(b.x - Math.cos(angle - 0.5) * 3, b.y - Math.sin(angle - 0.5) * 3);
       ctx.lineTo(b.x - Math.cos(angle + 0.5) * 3, b.y - Math.sin(angle + 0.5) * 3);
@@ -122,10 +159,27 @@
       ctx.fillStyle = `hsla(${hue}, 80%, 60%, ${alpha})`;
       ctx.fill();
     }
-
-    requestAnimationFrame(animate);
   }
-  animate();
+
+  function animate(now) {
+    renderFrame(now);
+    if (!reducedMotion.matches && !document.hidden) {
+      rafId = requestAnimationFrame(animate);
+    }
+  }
+
+  function restartAnimation() {
+    cancelAnimationFrame(rafId);
+    lastTime = performance.now();
+    rafId = requestAnimationFrame(animate);
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) restartAnimation();
+    else cancelAnimationFrame(rafId);
+  });
+  reducedMotion.addEventListener('change', restartAnimation);
+  restartAnimation();
 </script>
 </body>
 </html>
