@@ -24,6 +24,7 @@
   let dpr = 1;
   let resizeTimer;
   let rafId = 0;
+  let lastTime = performance.now();
   let rotX = 0.4;
   let rotY = 0.6;
   let targetRX = 0.4;
@@ -154,11 +155,16 @@
     return scale > 0.05;
   }
 
-  function renderFrame() {
-    rotX += (targetRX - rotX) * (reducedMotion.matches ? 1 : 0.06);
-    rotY += (targetRY - rotY) * (reducedMotion.matches ? 1 : 0.06);
+  function renderFrame(now) {
+    const frameScale = Math.min(Math.max((now - lastTime) / 16.6667, 0.25), 2);
+    lastTime = now;
+    const easing = reducedMotion.matches ? 1 : 1 - Math.pow(1 - 0.06, frameScale);
+    const fadeAlpha = 1 - Math.pow(1 - 0.1, frameScale);
 
-    ctx.fillStyle = 'rgba(7, 6, 10, 0.1)';
+    rotX += (targetRX - rotX) * easing;
+    rotY += (targetRY - rotY) * easing;
+
+    ctx.fillStyle = `rgba(7, 6, 10, ${fadeAlpha})`;
     ctx.fillRect(0, 0, W, H);
 
     visible.length = 0;
@@ -178,8 +184,8 @@
     }
   }
 
-  function animate() {
-    renderFrame();
+  function animate(now) {
+    renderFrame(now);
     if (!reducedMotion.matches && !document.hidden) {
       rafId = requestAnimationFrame(animate);
     }
@@ -187,6 +193,7 @@
 
   function restartAnimation() {
     cancelAnimationFrame(rafId);
+    lastTime = performance.now();
     rafId = requestAnimationFrame(animate);
   }
 
